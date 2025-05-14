@@ -1,0 +1,1 @@
+<h1>This is the text editor component</h1>

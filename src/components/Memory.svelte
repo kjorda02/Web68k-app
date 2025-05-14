@@ -1,0 +1,1 @@
+<h1>This is the memory component</h1>
