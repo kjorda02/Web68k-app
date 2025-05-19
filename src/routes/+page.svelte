@@ -1,24 +1,33 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { browser } from '$app/environment'; 
     import Organizer from '../components/Organizer.svelte';
 
-    import { initModule, assembleLst } from '$lib/assembler.svelte';
+    import { assemble } from '$lib/assembler.svelte';
 
-    const code = `
+    var code = `
         ORG $1000
-ETI     DC.W    7
+        INCLUDE "folder/test.X68"
+ETI     DS.W    7
 START:
         LEA  ETI,A0
-        MOVE.W  #1,A0
+        MOVE.W  #1,(A0)
         END START
 `;
 
-    onMount(async () => {
-        initModule();
-        setTimeout(() => {assembleLst(code);}, 1000);
 
-        setTimeout(() => {assembleLst(code);}, 2000);
+    onMount(async () => {
+        localStorage.setItem('/source.X68', code);
+
+    code = `EDITINIT
+    CLR.W   (SELVTX)    
+    CLR.B   (EDITSTAT)     ; SELECT
+    RTS`;
+
+        localStorage.setItem('/folder/test.X68', code);
+
+        setTimeout(() => {assemble(code);}, 1000);
+        setTimeout(() => {assemble(code);}, 2000);
+        // setTimeout(() => {assembleLst(code);}, 3000);
     });
     
     let isResizing = false;

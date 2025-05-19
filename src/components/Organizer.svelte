@@ -13,7 +13,7 @@
   <div id="editor"></div>
 
   <div class="resizerh"></div>
-3
+
   <div id="rightcol">
     <div id="emulator"></div>
     <div class="resizerv"></div>

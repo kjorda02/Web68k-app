@@ -1,21 +1,16 @@
-var __abort_js = () =>
+function __abort_js() {
     abort('native code called abort()');
+}
 
 // --------------------------------------------------------------
-var exitJS = (status, implicit) => {
-    EXITSTATUS = status;
-    
-    checkUnflushedContent();
-    
-    // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
-    if (keepRuntimeAlive() && !implicit) {
-        var msg = `program exited (with status: ${status}), but keepRuntimeAlive() is set (counter=${runtimeKeepaliveCounter}) due to an async operation, so halting execution but not exiting the runtime or preventing further async execution (you can use emscripten_force_exit, if you want to force a true shutdown)`;
-        err(msg);
-    }
-    
-    _proc_exit(status);
-    };
-    var _exit = exitJS;
+function exitJS(status, implicit) {
+    var msg = 'Program exited ';
+
+    if (implicit) msg += 'implicitly ';
+    else msg += 'explicitly ';
+
+    console.log(msg + `with status ${status}`);
+};
 
 // --------------------------------------------------------------
 var _fd_close = (fd) => {
@@ -28,16 +23,11 @@ function _fd_seek(fd, offset, whence, newOffset) {
 }
 
 // --------------------------------------------------------------
-var err = console.error.bind(console);
-var out = console.log.bind(console);
-
-function abort(what) {
-  err('Aborted(' + what + ')');
-  throw new WebAssembly.RuntimeError(what);
+function abort(msg) {
+    console.error('Aborted(' + msg + ')');
 }
 
 // --------------------------------------------------------------
-
 var _fd_write = (fd, iov, iovcnt, pnum) => {
     let num = 0;
     let text = '';
@@ -98,9 +88,9 @@ var wasmImports = {
 
 
 // --------------------------------------------------------------
-var cpu;
+export var cpu;
 WebAssembly.instantiateStreaming(
-    fetch("../cpu.wasm"), {
+    fetch("./wasm/cpu.wasm"), {
         env: wasmImports,
         wasi_snapshot_preview1: wasmImports,
         js: {
@@ -114,14 +104,9 @@ WebAssembly.instantiateStreaming(
     memory = results.instance.exports.memory;
 });
 
-
-
-document.getElementById('loadButton').addEventListener('click', function() {
-    // Get the text from the text boxes
-    const srec = document.getElementById('textBox1').value;
-    const lst = document.getElementById('textBox2').value;
-
+export function load_program(prog) {
     cpu.initCpu();
+
     const ptr = cpu.wasm_malloc(srec.length +1); // +1 for sentinel null character at the end
     var arr = new Uint8Array(cpu.memory.buffer, ptr, srec.length +1);
 
@@ -132,6 +117,4 @@ document.getElementById('loadButton').addEventListener('click', function() {
     cpu.load_program(ptr);
 
     cpu.wasmfree(ptr);
-});
-
- 
+}
