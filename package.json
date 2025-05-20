@@ -21,5 +21,13 @@
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
 		"vite": "^6.0.0"
+	},
+	"dependencies": {
+		"@babel/runtime": "^7.27.1",
+		"@codemirror/lang-javascript": "github:codemirror/lang-javascript",
+		"@codemirror/theme-one-dark": "github:codemirror/theme-one-dark",
+		"@uiw/codemirror-theme-duotone": "^4.23.12",
+		"codemirror": "^6.0.1",
+		"svelte-codemirror-editor": "^1.4.1"
 	}
 }
