@@ -1,12 +1,15 @@
 <script>
-    let sidebarWidth = 250;
+    let { width } = $props();
+
+
 </script>
 
-<div class="files" style="width: {sidebarWidth}px"></div>
+<div class="files" style="width: {width}px"></div>
 
 <style>
     .files {
-        background: #faf8f5; /* #f5f6f6 */
+        flex-shrink: 0;  /* IMPORTANTE!!! */
+        background: #f5f6f6; /* #faf8f5; */
         border-radius: 5px;
         height: 100%;
     }

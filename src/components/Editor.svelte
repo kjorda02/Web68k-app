@@ -1,16 +1,48 @@
 <script lang="ts">
     import CodeMirror from "svelte-codemirror-editor";
     import { duotoneLight, duotoneLightInit, duotoneDark } from '@uiw/codemirror-theme-duotone';
-    import { EditorView, keymap } from '@codemirror/view';
-    import { EditorState, Compartment, StateEffect } from "@codemirror/state"
+    import { basicSetup } from 'codemirror';
+    import { EditorView, keymap, gutter, GutterMarker } from '@codemirror/view';
+    import { EditorState, Compartment, StateEffect, EditorSelection } from "@codemirror/state"
     import {indentWithTab, indentMore, indentLess} from "@codemirror/commands"
     import Stack from "./Stack.svelte";
     import { disableScrollHandling } from "$app/navigation";
 
-    let value = "";
-    let view: EditorView;
-    var editable = true;
-    const tabSize = 4;
+    var { grow = $bindable()} = $props();
+
+    // --- SETUP -----------------------------------------------------------------
+    var value = $state("");
+    var view:EditorView;
+    var editable:boolean = $state(true);
+    var pointer:string = $state("auto");
+    const tabSize:number = 4;
+    var saved:Boolean = true;
+    var stoppedWriting:Boolean = true;
+
+    if (!localStorage.getItem('/MAIN.X68')) {
+        var code = `*-----------------------------------------------------------
+* Title      :
+* Written by :
+* Date       :
+* Description:
+*-----------------------------------------------------------
+    ORG $1000
+    INCLUDE "folder/test.X68"
+ETI     DS.W    7
+START:                  ; first instruction of program
+    
+* Put program code here
+    
+    LEA  ETI,A0
+    MOVE.W  #1,(A0)
+
+    END START        ; last line of source
+`;
+        localStorage.setItem('/MAIN.X68', code);
+    }
+
+    value = localStorage.getItem('/MAIN.X68');
+
 
     const tab = keymap.of([{
         key: "Tab",
@@ -26,16 +58,14 @@
             const spaces = " ".repeat(tabSize-(len%tabSize));
 
             // Create a transaction to insert spaces at the cursor position
-            const transaction = view.state.update({
-            changes: {
-                from: cursor.head, 
-                to: cursor.head, 
-                insert: spaces 
-            },
-            selection: {anchor: cursor.head + spaces.length, head: cursor.head + spaces.length}
+            view.dispatch({
+                changes: {
+                    from: cursor.head, 
+                    to: cursor.head, 
+                    insert: spaces 
+                },
+                selection: {anchor: cursor.head + spaces.length, head: cursor.head + spaces.length}
             });
-            // Apply the transaction
-            view.dispatch(transaction);
             
             return true;
         },
@@ -46,34 +76,109 @@
     }]);
 
 
-    function scrollToLine(lineNumber: number) {
-        if (!view) return;
+    // --- SAVING -----------------------------------------------------------------
+    const updateListener = EditorView.updateListener.of(update => {
+        if (update.docChanged) {
+            saved = false;
+            stoppedWriting = false;
+        }
+    });
+
+    setInterval(() => {
+        if (!saved && stoppedWriting) {
+            localStorage.setItem('/MAIN.X68', value);
+            saved = true;
+        }
         
-        // Convert 1-based line number to 0-based if needed
-        const line = lineNumber - 1;
-        
+        stoppedWriting = true;
+    }, 1000);
+
+
+    // --- EXPORTS -----------------------------------------------------------------
+    var savedState:EditorState;
+    var scroll;
+
+    function gutters() {
+
+    }
+    
+    export function debugMode() {
+        editable = false;
+        pointer="none";
+
+        if (!saved) { // Make sure assembler has latest changes
+            localStorage.setItem('/MAIN.X68', value);
+            saved = true;
+        }
+
+        savedState = view.state;
+        scroll = view.scrollSnapshot();
+
+        gutters();
+    }
+
+    export function scrollToLine(lineNumber: number) {
+
         // Get the position of the start of the line
         const lineStart = view.state.doc.line(lineNumber).from;
         
-        // Create a selection at the start of the line
-        const selection = {anchor: lineStart, head: lineStart};
-        
+        var selection:EditorSelection = EditorSelection.single(lineStart);
+
         // Scroll the line into view
+        // EditorView.scrollPastEnd
         view.dispatch({
-            selection,
-            scrollIntoView: true
+            selection: selection,
+            effects: EditorView.scrollIntoView(selection.ranges[0], { y: "center" })
         });
     }
 
-    setTimeout(() => scrollToLine(70), 12000);
+    export function editMode() {
+        editable = true;
+        pointer="auto";
+        view.setState(savedState);
+        view.dispatch({
+            effects: scroll
+        });
+
+        // TODO: Set focus
+    }
+    
+    setTimeout(() => {debugMode()}, 3000);
+    setTimeout(() => {scrollToLine(50)}, 5000);
+
+    setTimeout(() => {editMode()}, 8000);
+
+    const emptyMarker = new class extends GutterMarker {
+        toDOM() { return document.createTextNode("001000") }
+    }
+
+    const emptyLineGutter = [
+        gutter({
+            class: "cm-addr-gutter",
+            lineMarker(view, line) {
+                return line.from == line.to ? emptyMarker : null
+            },
+            initialSpacer: () => emptyMarker
+        }),
+        EditorView.baseTheme({ // .cm-gutterElement
+            ".cm-addr-gutter .cm-gutterElement": {
+            
+            paddingLeft: "1em",
+            paddingRight: "0.5em",
+            color: "#82a3ff"
+            }
+        })
+    ];
 
 </script>
 
-<div id="editor">
 
+<div id="editor" style:flex-grow={grow} style:--pointer={pointer}>
+
+    
     <CodeMirror bind:value lang={null} {tabSize} lineWrapping={true} {editable}
-    useTab={false} extensions={[tab]}
-    on:ready={(e) => view = e.detail}
+    basic={false} useTab={false} extensions={[emptyLineGutter, tab, updateListener, basicSetup ]} 
+    on:ready={(e) => { view = e.detail; } }
         
     theme={duotoneLightInit({
         settings: {
@@ -82,9 +187,7 @@
         }
       })
     }/>
-
 </div>
-
 
 <style>
     #editor {
@@ -97,6 +200,12 @@
 
     :global(.codemirror-wrapper) {
         flex-grow: 1;
+        
+    }
+
+    :global(.cm-content) {
+        pointer-events:var(--pointer);
+        user-select:var(--pointer); /* IMPORTANTE PARA FIREFOX */
     }
 
     :global(.cm-editor) {

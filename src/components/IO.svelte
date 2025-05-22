@@ -1,9 +1,14 @@
-<div id="io"></div>
+<script>
+    var { grow = $bindable()} = $props();
+
+</script>
+
+<div id="io" style:flex-grow={grow}></div>
 
 <style>
     #io {
-        flex:1;
-        background: #faf8f5;
+        flex:1 0 0;
+        background: #f5f6f6; /* #faf8f5; */
         border-radius: 5px;
     }
 </style>

@@ -2,21 +2,9 @@
     import { onMount } from 'svelte';
     import { assemble } from '$lib/assembler.svelte';
 
-    var code = `
-    ORG $1000
-    INCLUDE "folder/test.X68"
-ETI     DS.W    7
-START:
-    LEA  ETI,A0
-    MOVE.W  #1,(A0)
-    END START
-`;
-
-
     onMount(async () => {
-        localStorage.setItem('/source.X68', code);
 
-    code = `EDITINIT
+    var code = `EDITINIT
     CLR.W   (SELVTX)    
     CLR.B   (EDITSTAT)     ; SELECT
     RTS`;

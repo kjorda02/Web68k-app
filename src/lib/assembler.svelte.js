@@ -103,7 +103,7 @@ export async function assemble(src, lst) {
     // Call the WebAssembly function to assemble with arguments
     if (vasm && vasm.__main_argc_argv) {
         // The arguments we want to pass to the assembler
-        const args = ['vasm_m68k_mot', '/source.X68', '-m68000', '-chklabels', '-L', '/dev/stdout', '-o', '/dev/null'];
+        const args = ['vasm_m68k_mot', '/MAIN.X68', '-m68000', '-chklabels', '-L', '/dev/stdout', '-o', '/dev/null'];
         
         // Allocate memory for the argv array (pointers to strings)
         const argv = allocateMemory((args.length + 1) * 4); // 4 bytes per pointer
