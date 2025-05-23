@@ -1,11 +1,56 @@
+export var lineAddrs = {};
+export var srecOutput;
+
+var lstOutput;
+var errOutput;
+
+function parseLst(output) {
+    const lines = output.split('\n');
+    const addrs = {};
+    let currentFile = null;
+    
+    for (const line of lines) {
+        // Check for source file declaration
+        // Line example: Source: "/MAIN.X68"
+        //                        ^^^^^^^^^-Want this
+        const sourceMatch = line.match(/^Source:\s+"([^"]+)"/);
+        if (sourceMatch) {
+            currentFile = sourceMatch[1];
+            if (!addrs[currentFile]) {
+                addrs[currentFile] = {};
+            }
+            continue;
+        }
+        
+        // Check for address/line number pattern
+        // Line example: 00:0000101C 41F8100E        	    14:     LEA  ETI,A0
+        //                  ^^^^^^^^-Want this              ^^-And this
+        const addrMatch = line.match(/^(\d+):([0-9A-F]{8})\s+[0-9A-F]*\s+(\d+):/);
+        if (addrMatch) {
+            const address = parseInt(addrMatch[2], 16);
+            const lineNumber = parseInt(addrMatch[3], 10);
+            
+            addrs[currentFile][lineNumber] = address;
+        }
+    }
+    
+    return addrs;
+}
+
+function parseSrec(output) {
+    var match = output.match(/((?:S[0-9A-F]+\n)+)/);
+
+    return match[1];
+}
+
+// --------------------------------------------------------------
+
 class ExitStatus {
     constructor(status) {
         this.message = `Program terminated with exit(${status})`;
         this.status = status;
     }
 }
-
-// --------------------------------------------------------------
 
 var wasmImports = {
     exit: (status, implicit) => {throw new ExitStatus(status);},
@@ -51,6 +96,10 @@ function reset() {
         initial: 64,
         maximum: 8192
     });
+
+    fds = [ null, {path: '/dev/stdout'}, {path: '/dev/stderr'} ]
+    NULL_FD = null;
+    nextFd = 3;
     
     return WebAssembly.instantiateStreaming(
         fetch("src/lib/wasm/vasmm68k_motvasm.wasm"), {
@@ -66,9 +115,6 @@ function reset() {
         HEAPU8 = new Uint8Array(vasm.memory.buffer);
         memory = results.instance.exports.memory;
     });
-    
-    fds = [];
-    NULL_FD = null;
 }
 
 // ---------------------------------------------------------------------
@@ -95,69 +141,101 @@ function allocateMemory(size) {
     return vasm.wasm_malloc(size);
 }
 
-// Simplified assemble function
-export async function assemble(src, lst) {
-    // Instantiate new vasm module
-    await reset();
-    
-    // Call the WebAssembly function to assemble with arguments
-    if (vasm && vasm.__main_argc_argv) {
-        // The arguments we want to pass to the assembler
-        const args = ['vasm_m68k_mot', '/MAIN.X68', '-m68000', '-chklabels', '-L', '/dev/stdout', '-o', '/dev/null'];
-        
-        // Allocate memory for the argv array (pointers to strings)
-        const argv = allocateMemory((args.length + 1) * 4); // 4 bytes per pointer
-        
-        if (!argv) {
-            console.error('Failed to allocate memory for argv');
-            return -1;
-        }
-        
-        const dataView = new DataView(vasm.memory.buffer);
-        
-        // Allocate and write each argument string, then store its pointer in argv
-        for (let i = 0; i < args.length; i++) {
-            // Allocate memory for this argument string
-            const argPtr = allocateMemory(args[i].length + 1); // +1 for null terminator
-            
-            if (!argPtr) {
-                console.error(`Failed to allocate memory for argument ${i}`);
-                return -1;
-            }
-            
-            // Write the string to memory
-            writeStringToMemory(args[i], argPtr);
-            
-            // Store the pointer in the argv array
-            dataView.setUint32(argv + i * 4, argPtr, true);
-        }
-        
-        // Set the last argv entry to null
-        dataView.setUint32(argv + args.length * 4, 0, true);
-        
-        // Call the main function with argc and argv
-        try {
-            return vasm.__main_argc_argv(args.length, argv);
-        }
-        catch(e) {
-            console.log(e.message);
-            return e.status;
-        }
-    }
-    else {
-        console.error('VASM WebAssembly module not loaded or main function not exported');
-        return -1;
-    }
-}
 
+// Simplified assemble function
+export async function assemble(entryFile) {
+    var error;
+    
+    await reset(); // Instantiate new vasm module
+    lstOutput = "";
+    srecOutput = "";
+    errOutput = "";
+    
+    // The arguments we want to pass to the assembler
+    var args = ['vasm_m68k_mot', entryFile, '-m68000', '-chklabels', '-nocase' ,'-L', '/dev/stdout', '-o', '/dev/null'];
+    
+    lst = true;
+    if (callMain(args) != 0) {
+        error = "VASM ERROR "+errOutput;
+    } else {
+        error = errOutput;
+    }
+
+    lineAddrs = parseLst(lstOutput);
+
+    if (error) {
+        return error;
+    }
+
+    await reset(); // Instantiate new vasm module
+    lst = false;
+
+    // Call again with different arguments to obtain SREC output
+    args = ['vasm_m68k_mot', entryFile, '-m68000', '-chklabels', '-nocase' ,'-Fsrec', '-exec=START', '-o', '/dev/stdout'];
+    if (callMain(args) != 0 && !error) {
+        error = "VASM ERROR "+errOutput;
+    }
+
+    
+
+    srecOutput = parseSrec(srecOutput);
+
+    return error;
+}
 
 // ====================================================================================
 
+function callMain(args) {
+    if (!vasm || !vasm.__main_argc_argv) {
+        console.error('VASM WebAssembly module not loaded or main function not exported');
+        return -1;
+    }
+
+    // Allocate memory for the argv array (pointers to strings)
+    const argv = allocateMemory((args.length + 1) * 4); // 4 bytes per pointer
+
+    if (!argv) {
+        console.error('Failed to allocate memory for argv');
+        return -1;
+    }
+    
+    const dataView = new DataView(vasm.memory.buffer);
+    
+    // Allocate and write each argument string, then store its pointer in argv
+    for (let i = 0; i < args.length; i++) {
+        // Allocate memory for this argument string
+        const argPtr = allocateMemory(args[i].length + 1); // +1 for null terminator
+        
+        if (!argPtr) {
+            console.error(`Failed to allocate memory for argument ${i}`);
+            return -1;
+        }
+        
+        // Write the string to memory
+        writeStringToMemory(args[i], argPtr);
+        
+        // Store the pointer in the argv array
+        dataView.setUint32(argv + i * 4, argPtr, true);
+    }
+    
+    // Set the last argv entry to null
+    dataView.setUint32(argv + args.length * 4, 0, true);
+
+    // Call the main function with argc and argv
+    try {
+        vasm.__main_argc_argv(args.length, argv);
+    }
+    catch(e) {
+        console.log(e.message);
+        return e.status;;
+    }
+}
 
 // File descriptor table - only need to track open files and their positions
-var fds = [];
+var fds = [ null, {path: '/dev/stdout'}, {path: '/dev/stderr'} ];
 var nextFd = 3; // Start after stdin(0), stdout(1), stderr(2)
 var NULL_FD = null;
+var lst = true;
 
 // Get a string from memory
 function getStringFromMemory(ptr) {
@@ -275,9 +353,11 @@ function write(fd, iov, iovcnt, pnum)  {
     
     // Output to the appropriate stream
     if (fd === 1) {
-        console.log(text);
+        if (lst) { lstOutput += text; }
+        else { srecOutput += text; console.log('AAAAAAAAAAAAAAAAAAAAAAAA'); }
+
     } else if (fd === 2) {
-        console.error(text);
+        errOutput += text;
     }
     else if (NULL_FD === null && fd !== NULL_FD) {
         console.error('[DEBUG] WRITE CALLED WITH ACTUAL FILE FD: '+fd);
@@ -377,7 +457,7 @@ function seek(fd, offset, whence, newOffsetPtr) {
 
 // Minimal close implementation
 function close(fd) {
-    console.log('[DEBUG] Closed '+fds[fd].path);
+    console.log('[DEBUG] Closed '+fds[fd].path+"\n");
     delete fds[fd];
     return 0;
 }

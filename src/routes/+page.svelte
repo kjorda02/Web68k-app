@@ -25,12 +25,14 @@
         sidebarWidth = newWidth;
     }
 
-    var editor:number = $state(1);
-    var rightcol:number = $state(1);
+    var editor:Editor =$state();
 
-    var emulator:number = $state(1);
-    var mem:number = $state(3);
-    var io:number = $state(2);
+    var editorGrow:number = $state(1);
+    var rightcolGrow:number = $state(1);
+
+    var emulatorGrow:number = $state(1);
+    var memGrow:number = $state(3);
+    var ioGrow:number = $state(2);
 
     var rightcolp = $state();
     var row = $state();
@@ -38,7 +40,7 @@
   </script>
   
     <div id="ev">
-        <Navbar />
+        <Navbar {editor}/>
 
             <div id="row" bind:this={row}>
                 <Files width={sidebarWidth}/>
@@ -49,16 +51,16 @@
                 >
                 </div>
 
-                <Editor bind:grow={editor} />
+                <Editor bind:this={editor} bind:grow={editorGrow} />
                 
-                <Resizer horizontal={true} basis={sidebarWidth +8} parent={row} bind:grow1={editor} bind:grow2={rightcol} totalGrow={2} />
+                <Resizer horizontal={true} basis={sidebarWidth +8} parent={row} bind:grow1={editorGrow} bind:grow2={rightcolGrow} totalGrow={2} />
                 
-                <div id="rightcol" style:flex-grow={rightcol} bind:this={rightcolp} >
-                    <Emulator bind:grow={emulator} />
-                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={emulator} bind:grow2={mem} totalGrow={6} />
-                    <Memory bind:grow={mem} />
-                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={mem} bind:grow2={io} totalGrow={6} />
-                    <IO bind:grow={io} />
+                <div id="rightcol" style:flex-grow={rightcolGrow} bind:this={rightcolp} >
+                    <Emulator bind:grow={emulatorGrow} />
+                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={emulatorGrow} bind:grow2={memGrow} totalGrow={6} />
+                    <Memory bind:grow={memGrow} />
+                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={memGrow} bind:grow2={ioGrow} totalGrow={6} />
+                    <IO bind:grow={ioGrow} />
                 </div>
             </div>
     </div>

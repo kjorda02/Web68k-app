@@ -74,9 +74,9 @@ var memory = new WebAssembly.Memory({
 
 var wasmImports = {
     /** @export */
-    _abort_js: __abort_js,
+    exit: () => console.log('CPU EXITED'),
     /** @export */
-    exit: _exit,
+    _abort_js: __abort_js,
     /** @export */
     fd_close: _fd_close,
     /** @export */
@@ -90,7 +90,7 @@ var wasmImports = {
 // --------------------------------------------------------------
 export var cpu;
 WebAssembly.instantiateStreaming(
-    fetch("./wasm/cpu.wasm"), {
+    fetch("/src/lib/wasm/cpu.wasm"), {
         env: wasmImports,
         wasi_snapshot_preview1: wasmImports,
         js: {
@@ -99,8 +99,8 @@ WebAssembly.instantiateStreaming(
     }
 ).then(results => {
     cpu = results.instance.exports;
-    HEAPU32 = new Uint32Array(cpu.memory.buffer);
-    HEAPU8 = new Uint8Array(cpu.memory.buffer);
+    // HEAPU32 = new Uint32Array(cpu.memory.buffer);
+    // HEAPU8 = new Uint8Array(cpu.memory.buffer);
     memory = results.instance.exports.memory;
 });
 

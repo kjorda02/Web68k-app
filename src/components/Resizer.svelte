@@ -40,8 +40,8 @@
         grow1 = startGrow1 + growdelta;
         grow2 = startGrow2 - growdelta;
 
-        console.log('grow1: '+grow1);
-        console.log('grow2: '+grow2);
+        // console.log('grow1: '+grow1);
+        // console.log('grow2: '+grow2);
 
         //console.log('growdelta: '+growdelta);
 

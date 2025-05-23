@@ -2,11 +2,12 @@
     import CodeMirror from "svelte-codemirror-editor";
     import { duotoneLight, duotoneLightInit, duotoneDark } from '@uiw/codemirror-theme-duotone';
     import { basicSetup } from 'codemirror';
-    import { EditorView, keymap, gutter, GutterMarker } from '@codemirror/view';
+    import { EditorView, keymap, gutter, GutterMarker, lineNumbers } from '@codemirror/view';
     import { EditorState, Compartment, StateEffect, EditorSelection } from "@codemirror/state"
     import {indentWithTab, indentMore, indentLess} from "@codemirror/commands"
     import Stack from "./Stack.svelte";
     import { disableScrollHandling } from "$app/navigation";
+    import { lineAddrs } from '$lib/assembler.svelte';
 
     var { grow = $bindable()} = $props();
 
@@ -98,23 +99,21 @@ START:                  ; first instruction of program
     var savedState:EditorState;
     var scroll;
 
-    function gutters() {
-
-    }
     
     export function debugMode() {
         editable = false;
         pointer="none";
-
+        
         if (!saved) { // Make sure assembler has latest changes
-            localStorage.setItem('/MAIN.X68', value);
+
+            // value doesn't update fast enough apparently so we use doc
+            localStorage.setItem('/MAIN.X68', view.state.doc.toString());
             saved = true;
         }
 
         savedState = view.state;
         scroll = view.scrollSnapshot();
 
-        gutters();
     }
 
     export function scrollToLine(lineNumber: number) {
@@ -133,6 +132,7 @@ START:                  ; first instruction of program
     }
 
     export function editMode() {
+        addrGutters(false);
         editable = true;
         pointer="auto";
         view.setState(savedState);
@@ -143,32 +143,68 @@ START:                  ; first instruction of program
         // TODO: Set focus
     }
     
-    setTimeout(() => {debugMode()}, 3000);
-    setTimeout(() => {scrollToLine(50)}, 5000);
+    //setTimeout(() => {scrollToLine(50)}, 5000);
 
-    setTimeout(() => {editMode()}, 8000);
+    //setTimeout(() => {editMode()}, 8000);
 
-    const emptyMarker = new class extends GutterMarker {
-        toDOM() { return document.createTextNode("001000") }
+    class AddressMarker extends GutterMarker {
+        address:number;
+
+        constructor(addr:number) {
+            super();
+            this.address = addr;
+        }
+        toDOM() { return document.createTextNode(this.address.toString(16).toUpperCase()) }
     }
 
+    let gutterCompartment = new Compartment;
+
     const emptyLineGutter = [
+        
         gutter({
             class: "cm-addr-gutter",
-            lineMarker(view, line) {
-                return line.from == line.to ? emptyMarker : null
+            lineMarker(view, line) {;
+                const lineNumber = view.state.doc.lineAt(line.from).number;
+                if (lineAddrs['/MAIN.X68'][lineNumber]) {
+                    return new AddressMarker(lineAddrs['/MAIN.X68'][lineNumber]);
+                }
+                else {
+                    return null;
+                }
             },
-            initialSpacer: () => emptyMarker
+            initialSpacer: () => new AddressMarker(1)
         }),
-        EditorView.baseTheme({ // .cm-gutterElement
+        EditorView.baseTheme({
             ".cm-addr-gutter .cm-gutterElement": {
-            
-            paddingLeft: "1em",
-            paddingRight: "0.5em",
-            color: "#82a3ff"
+                paddingLeft: "1em",
+                color: "#9db6fc", // #82a3ff
+                textAlign: "right"
             }
         })
     ];
+
+    const lineNumbersThemeing = [
+        EditorView.baseTheme({
+            ".cm-lineNumbers .cm-gutterElement": {
+                paddingLeft: "1em",
+                paddingRight: "0px",
+                textAlign: "right"
+            }
+        })
+    ];
+    
+    
+
+    export function addrGutters(enable: boolean) {
+        view.dispatch({
+            effects: gutterCompartment.reconfigure(enable ? emptyLineGutter : [])
+        });
+
+        if (enable) {
+            console.log(lineAddrs);
+            console.log(lineAddrs['/MAIN.X68'][9]);
+        }
+    }
 
 </script>
 
@@ -177,7 +213,7 @@ START:                  ; first instruction of program
 
     
     <CodeMirror bind:value lang={null} {tabSize} lineWrapping={true} {editable}
-    basic={false} useTab={false} extensions={[emptyLineGutter, tab, updateListener, basicSetup ]} 
+    basic={false} useTab={false} extensions={[gutterCompartment.of([]), lineNumbersThemeing, tab, updateListener, basicSetup ]} 
     on:ready={(e) => { view = e.detail; } }
         
     theme={duotoneLightInit({
@@ -204,8 +240,8 @@ START:                  ; first instruction of program
     }
 
     :global(.cm-content) {
-        pointer-events:var(--pointer);
-        user-select:var(--pointer); /* IMPORTANTE PARA FIREFOX */
+        pointer-events: var(--pointer);
+        user-select: var(--pointer); /* IMPORTANTE PARA FIREFOX */
     }
 
     :global(.cm-editor) {
