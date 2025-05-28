@@ -1,4 +1,5 @@
 export var lineAddrs = {};
+export var addrLines = {};
 export var srecOutput;
 
 var lstOutput;
@@ -6,7 +7,8 @@ var errOutput;
 
 function parseLst(output) {
     const lines = output.split('\n');
-    const addrs = {};
+    const addrs = {}; // Given line, what is corresponding address?
+    const addrLines = {}; // Given address, what is the corresponding line?
     let currentFile = null;
     
     for (const line of lines) {
@@ -31,10 +33,11 @@ function parseLst(output) {
             const lineNumber = parseInt(addrMatch[3], 10);
             
             addrs[currentFile][lineNumber] = address;
+            addrLines[address] = {src: currentFile, line: lineNumber};
         }
     }
     
-    return addrs;
+    return [addrs, addrLines];
 }
 
 function parseSrec(output) {
@@ -46,6 +49,8 @@ function parseSrec(output) {
 // --------------------------------------------------------------
 
 class ExitStatus {
+    message:string;
+    status:number;
     constructor(status) {
         this.message = `Program terminated with exit(${status})`;
         this.status = status;
@@ -75,7 +80,7 @@ var wasmImports = {
     
     __syscall_rmdir: rmdir,
     
-    _abort_js: (msg) => { abort('native code called abort(): '+msg); },
+    _abort_js: (msg) => { console.error('native code called abort(): '+msg); },
     
     emscripten_resize_heap: function(delta) {memory.grow(delta); },
     
@@ -97,7 +102,7 @@ function reset() {
         maximum: 8192
     });
 
-    fds = [ null, {path: '/dev/stdout'}, {path: '/dev/stderr'} ]
+    fds = [ null, {path: '/dev/stdout', position: -1}, {path: '/dev/stderr', position: -1} ]
     NULL_FD = null;
     nextFd = 3;
     
@@ -161,7 +166,9 @@ export async function assemble(entryFile) {
         error = errOutput;
     }
 
-    lineAddrs = parseLst(lstOutput);
+    console.log(lstOutput);
+    [lineAddrs, addrLines] = parseLst(lstOutput);
+    console.log(addrLines);
 
     if (error) {
         return error;
@@ -175,9 +182,7 @@ export async function assemble(entryFile) {
     if (callMain(args) != 0 && !error) {
         error = "VASM ERROR "+errOutput;
     }
-
     
-
     srecOutput = parseSrec(srecOutput);
 
     return error;
@@ -232,7 +237,7 @@ function callMain(args) {
 }
 
 // File descriptor table - only need to track open files and their positions
-var fds = [ null, {path: '/dev/stdout'}, {path: '/dev/stderr'} ];
+var fds = [ null, {path: '/dev/stdout', position: -1}, {path: '/dev/stderr', position: -1} ];
 var nextFd = 3; // Start after stdin(0), stdout(1), stderr(2)
 var NULL_FD = null;
 var lst = true;
@@ -354,7 +359,7 @@ function write(fd, iov, iovcnt, pnum)  {
     // Output to the appropriate stream
     if (fd === 1) {
         if (lst) { lstOutput += text; }
-        else { srecOutput += text; console.log('AAAAAAAAAAAAAAAAAAAAAAAA'); }
+        else { srecOutput += text; }
 
     } else if (fd === 2) {
         errOutput += text;

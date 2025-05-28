@@ -101,20 +101,26 @@ WebAssembly.instantiateStreaming(
     cpu = results.instance.exports;
     // HEAPU32 = new Uint32Array(cpu.memory.buffer);
     // HEAPU8 = new Uint8Array(cpu.memory.buffer);
-    memory = results.instance.exports.memory;
+    memory = results.instance.exports.memory as WebAssembly.Memory;
 });
 
-export function load_program(prog) {
-    cpu.initCpu();
-
-    const ptr = cpu.wasm_malloc(srec.length +1); // +1 for sentinel null character at the end
-    var arr = new Uint8Array(cpu.memory.buffer, ptr, srec.length +1);
-
-    const bytes = (new TextEncoder()).encode(srec);
+function alloc_str(str) {
+    const ptr:number = cpu.wasm_malloc(str.length +1); // +1 for sentinel null character at the end
+    var arr = new Uint8Array(cpu.memory.buffer, ptr, str.length +1);
+    const bytes = (new TextEncoder()).encode(str);
+    
     arr.set(bytes);
+    arr[str.length] = 0; // sentinel
+    return ptr;
+}
 
-    arr[srec.length] = 0; // sentinel
+export function load_program(prog:string) {
+    cpu.initCpu(); // Initializes register and RAM with 0s
+
+    const ptr:number = alloc_str(prog);
     cpu.load_program(ptr);
 
     cpu.wasmfree(ptr);
 }
+
+

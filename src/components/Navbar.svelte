@@ -1,10 +1,9 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { assemble, srecOutput } from '$lib/assembler.svelte';
+    import { assemble, srecOutput, addrLines } from '$lib/assembler.svelte';
     import Editor from './Editor.svelte';
-    import { cpu } from '$lib/cpu.svelte';
-
-    import { Button } from "./ui/button"
+    import { cpu, load_program } from '$lib/cpu.svelte';
+    import { Button } from "./ui/button";
     
 
     var { editor }: { editor:Editor } = $props();
@@ -21,7 +20,6 @@ EDITINIT
     RTS`;
 
         localStorage.setItem('/folder/test.X68', code);
-
         
         // setTimeout(() => {console.log(code);}, 1000);
         setTimeout(() => {}, 2000);
@@ -32,7 +30,6 @@ EDITINIT
     var disabled = $state(false);
     var running = $state(false);
     var hasRun = $state(false);
-
 
     async function run() {
         editor.debugMode(); // Make editor non-editable
@@ -53,7 +50,7 @@ EDITINIT
             running = true;
             hasRun = true;
             console.log(srecOutput);
-            cpu.load_program(srecOutput);  // TODO: Pass in char* properly!!
+            load_program(srecOutput);  // TODO: Pass in char* properly!!
         }
     }
 
@@ -72,7 +69,12 @@ EDITINIT
     }
 
     function step() {
-
+        var pc:number =cpu.step_forwards();
+        if (!addrLines[pc]) {
+            running = false;
+            return;
+        }
+        editor.scrollToLine(addrLines[pc].line);
     }
 
     function stepInto() {
@@ -118,7 +120,7 @@ EDITINIT
 
         <div class="spacer"></div>
 
-        <Button class="button" onclick={step} {disabled}>
+        <Button class="button" onclick={step} disabled={disabled || !running}>
             <svg fill="#ffffff" viewBox="-32 0 512 512" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M384 44v424c0 6.6-5.4 12-12 12h-48c-6.6 0-12-5.4-12-12V291.6l-195.5 181C95.9 489.7 64 475.4 64 448V64c0-27.4 31.9-41.7 52.5-24.6L312 219.3V44c0-6.6 5.4-12 12-12h48c6.6 0 12 5.4 12 12z"></path></g></svg>
         </Button>
 
