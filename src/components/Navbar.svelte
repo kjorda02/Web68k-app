@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { assemble, srecOutput, addrLines } from '$lib/assembler.svelte';
     import Editor from './Editor.svelte';
-    import { cpu, load_program } from '$lib/cpu.svelte';
+    import { cpu } from '$lib/cpu.svelte';
     import { Button } from "./ui/button";
     
 
@@ -50,7 +50,7 @@ EDITINIT
             running = true;
             hasRun = true;
             console.log(srecOutput);
-            load_program(srecOutput);  // TODO: Pass in char* properly!!
+            cpu.load_program(srecOutput);  // TODO: Pass in char* properly!!
         }
     }
 
@@ -69,7 +69,7 @@ EDITINIT
     }
 
     function step() {
-        var pc:number =cpu.step_forwards();
+        var pc:number = cpu.step_forwards();
         if (!addrLines[pc]) {
             running = false;
             return;

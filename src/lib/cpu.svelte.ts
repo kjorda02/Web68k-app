@@ -1,28 +1,3 @@
-function __abort_js() {
-    abort('native code called abort()');
-}
-
-// --------------------------------------------------------------
-function exitJS(status, implicit) {
-    var msg = 'Program exited ';
-
-    if (implicit) msg += 'implicitly ';
-    else msg += 'explicitly ';
-
-    console.log(msg + `with status ${status}`);
-};
-
-// --------------------------------------------------------------
-var _fd_close = (fd) => {
-    abort('fd_close called without SYSCALLS_REQUIRE_FILESYSTEM');
-};
-
-// --------------------------------------------------------------
-function _fd_seek(fd, offset, whence, newOffset) {
-    abort('fd_seek called without SYSCALLS_REQUIRE_FILESYSTEM');
-}
-
-// --------------------------------------------------------------
 function abort(msg) {
     console.error('Aborted(' + msg + ')');
 }
@@ -36,7 +11,7 @@ var _fd_write = (fd, iov, iovcnt, pnum) => {
     const decoder = new TextDecoder();
     
     // Access the memory directly
-    const buffer = cpu.memory.buffer;
+    const buffer = wasmcpu.memory.buffer;
     const view = new DataView(buffer);
     
     // Process all of the IOVs (I/O vectors)
@@ -73,22 +48,22 @@ var memory = new WebAssembly.Memory({
 });
 
 var wasmImports = {
-    /** @export */
     exit: () => console.log('CPU EXITED'),
-    /** @export */
-    _abort_js: __abort_js,
-    /** @export */
-    fd_close: _fd_close,
-    /** @export */
-    fd_seek: _fd_seek,
-    /** @export */
+    
+    _abort_js: () => abort('native code called abort()'),
+    
+    fd_close: () => abort('fd_close called but NOT IMPLEMENTED!'),
+    
+    fd_seek: () => abort('fd_seek called but NOT IMPLEMENTED!'),
+    
     fd_write: _fd_write,
+
     emscripten_resize_heap: function(delta) {memory.grow(delta); }
-  };
+};
 
 
 // --------------------------------------------------------------
-export var cpu;
+var wasmcpu;
 WebAssembly.instantiateStreaming(
     fetch("/src/lib/wasm/cpu.wasm"), {
         env: wasmImports,
@@ -98,15 +73,15 @@ WebAssembly.instantiateStreaming(
         }
     }
 ).then(results => {
-    cpu = results.instance.exports;
+    wasmcpu = results.instance.exports;
     // HEAPU32 = new Uint32Array(cpu.memory.buffer);
     // HEAPU8 = new Uint8Array(cpu.memory.buffer);
     memory = results.instance.exports.memory as WebAssembly.Memory;
 });
 
 function alloc_str(str) {
-    const ptr:number = cpu.wasm_malloc(str.length +1); // +1 for sentinel null character at the end
-    var arr = new Uint8Array(cpu.memory.buffer, ptr, str.length +1);
+    const ptr:number = wasmcpu.wasm_malloc(str.length +1); // +1 for sentinel null character at the end
+    var arr = new Uint8Array(wasmcpu.memory.buffer, ptr, str.length +1);
     const bytes = (new TextEncoder()).encode(str);
     
     arr.set(bytes);
@@ -114,13 +89,66 @@ function alloc_str(str) {
     return ptr;
 }
 
-export function load_program(prog:string) {
-    cpu.initCpu(); // Initializes register and RAM with 0s
+// --------------------------------------------------------------
+class CPU {
+    #d: number[] = $state([0, 0, 0, 0, 0, 0, 0, 0]); // D0-D7
+    #a: number[] = $state([0, 0, 0, 0, 0, 0, 0, 0]); // A0-A7
+    #pc: number = $state(0);
+    #sr: number = $state(0);
+    #ram: number[] = $state([]);
+    cycles: number = $state(0);
+    running:boolean = $state(false);
 
-    const ptr:number = alloc_str(prog);
-    cpu.load_program(ptr);
+    d = new Proxy(this.#d, {
+        set(target, n, val) {
+            target[n] = val;
+            wasmcpu.write_Dn(val, n, 2);
+            return true;
+        }
+    });
 
-    cpu.wasmfree(ptr);
+    a = new Proxy(this.#a, {
+        set(target, n, val) {
+            target[n] = val;
+            wasmcpu.write_An(val, n, 2);
+            return true;
+        }
+    });
+
+    ram = new Proxy(this.#ram, {
+        // TODO: How to handle get?
+        // New function to set window size and start @?
+        set(target, n, val) {
+            //target[n] = val;
+            wasmcpu.write_mem(n, 0, val);
+            return true;
+        }
+    });
+
+    get pc() { return this.#pc; }
+    set pc(val) {
+        wasmcpu.write_pc(val);
+        this.#pc = val;
+    }
+
+    get sr() { return this.#sr; }
+    set sr(val) {
+        wasmcpu.write_sr(val); 
+        this.#sr = val;
+    }
+
+    step_forwards(): number {
+        return wasmcpu.step_forwards();
+    }
+
+    load_program(prog:string) {
+        wasmcpu.initCpu(); // Initializes register and RAM with 0s
+    
+        const ptr:number = alloc_str(prog);
+        wasmcpu.load_program(ptr);
+    
+        wasmcpu.wasmfree(ptr);
+    }
 }
 
-
+export var cpu = new CPU();
