@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     var { grow = $bindable()} = $props();
 
 </script>

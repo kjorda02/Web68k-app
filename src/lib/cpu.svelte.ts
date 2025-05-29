@@ -61,7 +61,6 @@ var wasmImports = {
     emscripten_resize_heap: function(delta) {memory.grow(delta); }
 };
 
-
 // --------------------------------------------------------------
 var wasmcpu;
 WebAssembly.instantiateStreaming(
@@ -79,25 +78,62 @@ WebAssembly.instantiateStreaming(
     memory = results.instance.exports.memory as WebAssembly.Memory;
 });
 
-function alloc_str(str) {
-    const ptr:number = wasmcpu.wasm_malloc(str.length +1); // +1 for sentinel null character at the end
-    var arr = new Uint8Array(wasmcpu.memory.buffer, ptr, str.length +1);
-    const bytes = (new TextEncoder()).encode(str);
-    
-    arr.set(bytes);
-    arr[str.length] = 0; // sentinel
-    return ptr;
-}
-
 // --------------------------------------------------------------
 class CPU {
     #d: number[] = $state([0, 0, 0, 0, 0, 0, 0, 0]); // D0-D7
     #a: number[] = $state([0, 0, 0, 0, 0, 0, 0, 0]); // A0-A7
     #pc: number = $state(0);
     #sr: number = $state(0);
-    #ram: number[] = $state([]);
+    #memWindow: number[][] = $state([ // Each row is 16 bytes
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ]);
+    #firstRun: boolean = true;
+
+    // Fetches new values from wasm module
+    #update_values() {
+        this.#d.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_D_regs(), 8));
+        this.#a.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_A_regs(), 8));
+        this.#sr = wasmcpu.read_sr();
+    }
+
+    #alloc_str(str: string) {
+        const ptr:number = wasmcpu.wasm_malloc(str.length +1); // +1 for sentinel null character at the end
+        var arr = new Uint8Array(wasmcpu.memory.buffer, ptr, str.length +1);
+        const bytes = (new TextEncoder()).encode(str);
+        
+        arr.set(bytes);
+        arr[str.length] = 0; // sentinel
+        return ptr;
+    }
+
+    #mem_window_write(row:number, col:number, val:number) {
+        let addr = this.windowBaseAddr;
+        addr += row*16; // 16 bytes per row
+        addr += col;
+        wasmcpu.write_mem(addr, 0, val);
+    }
+    
+    // --- PUBLIC ATTRIBUTES BELOW -----------------------------
     cycles: number = $state(0);
     running:boolean = $state(false);
+    windowBaseAddr: number = 0;
+
+    
+
+    get pc() { return this.#pc; }
+    set pc(val) {
+        wasmcpu.write_pc(val);
+        this.#pc = val;
+    }
+
+    get sr() { return this.#sr; }
+    set sr(val) {
+        wasmcpu.write_sr(val); 
+        this.#sr = val;
+    }
 
     d = new Proxy(this.#d, {
         set(target, n, val) {
@@ -115,39 +151,54 @@ class CPU {
         }
     });
 
-    ram = new Proxy(this.#ram, {
-        // TODO: How to handle get?
-        // New function to set window size and start @?
-        set(target, n, val) {
-            //target[n] = val;
-            wasmcpu.write_mem(n, 0, val);
-            return true;
+    memWindow = new Proxy(this.#memWindow, {
+        get(target, row) {
+            return new Proxy(target[row], {
+                set(target, col, val) {
+                    target[col] = val;
+                    this.#mem_window_write(row, col, val);
+                    return true;
+                }
+            });
         }
     });
 
-    get pc() { return this.#pc; }
-    set pc(val) {
-        wasmcpu.write_pc(val);
-        this.#pc = val;
+    // --- PUBLIC METHODS BELOW ---------------------------------
+    load(prog:string) {
+        if (this.#firstRun) {
+            this.reset();
+            this.#firstRun = false;
+        }
+        const ptr:number = this.#alloc_str(prog);
+        wasmcpu.load_program(ptr);
+        wasmcpu.wasmfree(ptr);
     }
 
-    get sr() { return this.#sr; }
-    set sr(val) {
-        wasmcpu.write_sr(val); 
-        this.#sr = val;
+    reset() {
+        wasmcpu.initCpu(); // Initializes register and RAM with 0s
+        this.#update_values();
+    }
+
+    run() {
+
     }
 
     step_forwards(): number {
-        return wasmcpu.step_forwards();
+        this.#pc = wasmcpu.step_forwards();
+        this.#update_values();
+        return this.#pc;
     }
 
-    load_program(prog:string) {
-        wasmcpu.initCpu(); // Initializes register and RAM with 0s
-    
-        const ptr:number = alloc_str(prog);
-        wasmcpu.load_program(ptr);
-    
-        wasmcpu.wasmfree(ptr);
+    step_back() {
+
+    }
+
+    step_into() {
+
+    }
+
+    step_out() {
+
     }
 }
 

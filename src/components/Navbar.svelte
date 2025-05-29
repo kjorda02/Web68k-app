@@ -50,7 +50,7 @@ EDITINIT
             running = true;
             hasRun = true;
             console.log(srecOutput);
-            cpu.load_program(srecOutput);  // TODO: Pass in char* properly!!
+            cpu.load(srecOutput);
         }
     }
 
@@ -59,6 +59,7 @@ EDITINIT
     }
 
     function reset() {
+        cpu.reset();
         editor.addrGutters(false);
         editor.editMode();
         hasRun = false;
@@ -84,7 +85,6 @@ EDITINIT
     function stepOut() {
 
     }
-
 
 </script>
 
@@ -159,7 +159,7 @@ EDITINIT
         width: 50%;
         max-width:500px;
         height: 100%;
-        overflow:scroll;
+        overflow-x: auto;
     }
 
     :global(.button) {

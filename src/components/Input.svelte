@@ -70,13 +70,13 @@
 
 <!-- <input type="text" id="test" maxlength="9" pattern="[0-9A-F]{8}" bind:value={cpu.d[0]} > -->
 
-<div class="hex-editor" contenteditable="true" spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
+<div class="hex-editor" spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
     {#each hexChars as char, i}
       <span class:cursor={i === cursorPos} onclick={() => cursorPos = i} >
         {char}
       </span>
     {/each}
-  </div>
+</div>
 
 <style>
     div {
@@ -87,7 +87,6 @@
         font-family: monospace;
         padding-left: 0.5em;
         padding-right: 0.5em;
-        outline: none;
         caret-color: transparent;
     }
 

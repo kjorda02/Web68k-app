@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
     import { cpu } from '$lib/cpu.svelte';
     import Input from './Input.svelte';
     var { grow = $bindable()} = $props();
@@ -99,7 +99,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-around;
-        overflow: scroll;
+        overflow-y: auto;
     }
 
     span {
@@ -111,11 +111,13 @@
     .lines {
         display: flex;
         flex-wrap: wrap;
+        justify-content: center;
     }
 
     .line {
         display: flex;
         flex-wrap: wrap;
+        margin-bottom: 3px;
     }
 
     .reg {

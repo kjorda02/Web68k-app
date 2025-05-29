@@ -17,8 +17,6 @@
     var editable:boolean = $state(true);
     var pointer:string = $state("auto");
     const tabSize:number = 4;
-    var saved:Boolean = true;
-    var stoppedWriting:Boolean = true;
 
     if (!localStorage.getItem('/MAIN.X68')) {
         var code = `*-----------------------------------------------------------
@@ -78,6 +76,9 @@ START:                  ; first instruction of program
 
 
     // --- SAVING -----------------------------------------------------------------
+    var saved:Boolean = true;
+    var stoppedWriting:Boolean = true;
+    
     const updateListener = EditorView.updateListener.of(update => {
         if (update.docChanged) {
             saved = false;
