@@ -71,7 +71,8 @@
         display: flex;
         flex-direction: column;
         height: 100vh;
-        background: #E4E5E6;
+        /* background: #E4E5E6; */
+        background: #a7a094;
     }
   
     #row {
@@ -86,6 +87,7 @@
         flex: 1 1 0;
         display: flex;
         flex-direction: column;
+        min-width: 0
     }
 
     .resizerh {
@@ -94,19 +96,12 @@
         cursor: col-resize;
         align-self: center;
     }
-
-    .resizerv {
-        height: 4px;
-        width: 99%;
-        cursor: row-resize;
-        align-self: center;
-    }
     
-    .resizerh:hover, .resizerv:hover {
+    .resizerh:hover {
         background: #999;
     }
 
-    .resizerh:active, .resizerv:active {
+    .resizerh:active {
         background: #666;
     }
 

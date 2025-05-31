@@ -19,7 +19,6 @@
         event.preventDefault();
 
         // Navigation
-
         switch(key) {
             case 'ArrowLeft':
                 if (cursorPos > 0) { cursorPos--; }
@@ -80,14 +79,15 @@
 
 <style>
     div {
-        display: inline-block;
         background: white;
-        border: solid #858585 1px;
-        border-radius: 3px;
+        /* border: solid #858585 1px;
+        border-radius: 3px; */
         font-family: monospace;
-        padding-left: 0.5em;
-        padding-right: 0.5em;
+        padding-left: 0.7ch;
+        padding-right: 0.7ch;
         caret-color: transparent;
+        display: flex;
+        box-shadow: inset 1px 1px 1px hsl(60, 2%, 24%), inset -1px -1px 0px #d4d0c8;
     }
 
     div span {
@@ -107,6 +107,6 @@
 
     @keyframes blink {
         0%, 50% { background: #0a246a; color:white; }
-        51%, 100% { background: white; color:black; }
+        51%, 100% { background: transparent; color:black; }
     }
 </style>

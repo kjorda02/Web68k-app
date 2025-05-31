@@ -86,6 +86,7 @@ EDITINIT
 
     }
 
+    $inspect(cpu.memWindow);
 </script>
 
 <div class="navbar" style:--cursor={cursor} >
@@ -142,10 +143,11 @@ EDITINIT
 
 <style>
     .navbar {
-        background: #E4E5E6;
+        /* background: #E4E5E6; */
         height: 60px;
         display: flex;
         justify-content: center;
+        background: #d4d0c8;
     }
 
     .navbar * {

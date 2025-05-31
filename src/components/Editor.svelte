@@ -237,7 +237,6 @@ START:                  ; first instruction of program
 
     :global(.codemirror-wrapper) {
         flex-grow: 1;
-        
     }
 
     :global(.cm-content) {

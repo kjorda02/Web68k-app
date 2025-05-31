@@ -97,6 +97,13 @@ class CPU {
         this.#d.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_D_regs(), 8));
         this.#a.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_A_regs(), 8));
         this.#sr = wasmcpu.read_sr();
+
+        let ptr = wasmcpu.read_mem_window(this.windowBaseAddr, this.#memWindow.length*16);
+        let window = new Uint8Array(wasmcpu.memory.buffer, ptr, this.#memWindow.length*16);
+        
+        for (let i = 0; i < this.#memWindow.length; i++) {
+            this.#memWindow[i].splice(0, 16, ...window.subarray(i*16, i*16 + 16));
+        }
     }
 
     #alloc_str(str: string) {
@@ -108,19 +115,11 @@ class CPU {
         arr[str.length] = 0; // sentinel
         return ptr;
     }
-
-    #mem_window_write(row:number, col:number, val:number) {
-        let addr = this.windowBaseAddr;
-        addr += row*16; // 16 bytes per row
-        addr += col;
-        wasmcpu.write_mem(addr, 0, val);
-    }
     
     // --- PUBLIC ATTRIBUTES BELOW -----------------------------
     cycles: number = $state(0);
     running:boolean = $state(false);
     windowBaseAddr: number = 0;
-
     
 
     get pc() { return this.#pc; }
@@ -153,10 +152,20 @@ class CPU {
 
     memWindow = new Proxy(this.#memWindow, {
         get(target, row) {
+            if (row === 'length') { return target.length; }
+            
             return new Proxy(target[row], {
                 set(target, col, val) {
                     target[col] = val;
-                    this.#mem_window_write(row, col, val);
+                    
+                    let r = Number(row);
+                    let c = Number(col);
+
+                    //console.log(`ẀRITEEE. row: ${r}, col: ${c}, val: ${val}`);
+                    let addr = this.windowBaseAddr;
+                    addr += r*16; // 16 bytes per row
+                    addr += c;
+                    wasmcpu.write_mem(addr, 0, val);
                     return true;
                 }
             });
