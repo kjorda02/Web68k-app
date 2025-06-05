@@ -1,26 +1,35 @@
 <script lang="ts">
     import { cpu } from '$lib/cpu.svelte';
     import Input  from './Input.svelte';
+    import MemInput  from './MemInput.svelte';
 
-    var { grow = $bindable()} = $props();
-    var baseaddr = $state(0);
+
+    var { grow = $bindable()} = $props(); // resizer stuff
+    var memEditor;
 
 </script>
 
 <div id="mem" style:flex-grow={grow}>
     <div class="editor">
         <div class="controls">
-            <button>Up</button>
-            <button>Down</button>
+            <div class="buttons">
+                <button onclick={() => cpu.windowBaseAddr -= 16}>Up</button>
+                <button onclick={() => cpu.windowBaseAddr += 16}>Down</button>
+            </div>
+            
+            <div class="buttons">
+                <button onclick={() => cpu.windowBaseAddr -= cpu.memWindow.length*16} >PgUp</button>
+                <button onclick={() => cpu.windowBaseAddr += cpu.memWindow.length*16}>PgDown</button>
+            </div>
         </div>
 
         <div class="displaymem">
             <div class="left">
                 <div class="line toptitles">
-                    <Input hexValue={baseaddr}/>
+                    <Input bind:hexValue={cpu.windowBaseAddr}/>
                 </div>
-                {#each {length: 16}, i}
-                    <div class="line titles">{(cpu.windowBaseAddr + i*16).toString(16).toUpperCase().padStart(8, '0')}</div>
+                {#each {length: cpu.memWindow.length}, i}
+                    <div class="line titles">{(cpu.windowBaseAddr + i*16).toString(16).toUpperCase().padStart(8, '0').substring(0, 7) + "X" }</div>
                 {/each}
             </div>
     
@@ -30,6 +39,8 @@
                         <div class="item">X{i.toString(16).toUpperCase()}</div>
                     {/each}
                 </div>
+
+                <MemInput lines={cpu.memWindow} bind:this={memEditor} />
             </div>
         </div>
     </div>
@@ -48,10 +59,21 @@
         background: #d4d0c8;
     }
 
+    .buttons {
+        display: flex;
+        gap: 15px;
+    }
+
     button {
         box-shadow: 1px 1px 1px hsl(60, 2%, 10%), 1px 1px 1px white inset;
         padding-right: 1ch;
         padding-left: 1ch;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #c4c1b9;
     }
 
     .controls {
@@ -71,12 +93,13 @@
         border-radius: 3px;
         border: solid #858585 1px;
         overflow-y:hidden;
-        box-shadow: 3px 3px 4px hsl(60, 2%, 44%);
+        box-shadow: 3px 3px 4px hsl(60, 2%, 44%), inset 3px 3px 4px hsl(60, 2%, 44%);
     }
 
     .displaymem {
         background: white;
-        flex-grow: 1;
+        flex: 1 1 0;
+        min-height: 0;
         display: flex;
     }
 
@@ -91,6 +114,8 @@
     .right {
         flex-grow: 1;
         overflow-x: auto;
+        display: flex;
+        flex-direction: column;
     }
 
     .line {

@@ -107,8 +107,18 @@
         overflow: hidden;
         border-right:solid white 1px;
         border-bottom:solid white 1px;
-        /* box-shadow: 1px 1px 1px hsl(60, 2%, 24%) */
+        position: relative;
+    }
 
+    .input::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        box-shadow: inset 1px 1px 1px hsl(60, 2%, 24%), inset -1px -1px 0px #d4d0c8;
     }
 
     span {

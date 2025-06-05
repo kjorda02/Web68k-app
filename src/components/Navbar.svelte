@@ -86,7 +86,7 @@ EDITINIT
 
     }
 
-    $inspect(cpu.memWindow);
+    // $inspect(cpu.memWindow);
 </script>
 
 <div class="navbar" style:--cursor={cursor} >
@@ -138,7 +138,6 @@ EDITINIT
         </Button>
         
     </div>
-
 </div>
 
 <style>

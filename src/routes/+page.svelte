@@ -27,8 +27,8 @@
 
     var editor:Editor =$state();
 
-    var editorGrow:number = $state(1);
-    var rightcolGrow:number = $state(1);
+    var editorGrow:number = $state(3);
+    var rightcolGrow:number = $state(2);
 
     var emulatorGrow:number = $state(1);
     var memGrow:number = $state(3);
@@ -53,7 +53,7 @@
 
                 <Editor bind:this={editor} bind:grow={editorGrow} />
                 
-                <Resizer horizontal={true} basis={sidebarWidth +8} parent={row} bind:grow1={editorGrow} bind:grow2={rightcolGrow} totalGrow={2} />
+                <Resizer horizontal={true} basis={sidebarWidth +8} parent={row} bind:grow1={editorGrow} bind:grow2={rightcolGrow} totalGrow={5} />
                 
                 <div id="rightcol" style:flex-grow={rightcolGrow} bind:this={rightcolp} >
                     <Emulator bind:grow={emulatorGrow} />
@@ -66,6 +66,10 @@
     </div>
   
   <style>
+
+    :global(html) {
+        font-size: 14px;
+    }
 
     #ev {
         display: flex;

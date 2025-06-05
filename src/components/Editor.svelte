@@ -178,7 +178,7 @@ START:                  ; first instruction of program
         EditorView.baseTheme({
             ".cm-addr-gutter .cm-gutterElement": {
                 paddingLeft: "1em",
-                color: "#9db6fc", // #82a3ff
+                color: "#82a3ff", // #9db6fc
                 textAlign: "right"
             }
         })

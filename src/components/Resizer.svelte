@@ -47,7 +47,7 @@
         // grow1 = nobodyLikesFractionalPixels(grow1, growperpx);
         // grow2 = nobodyLikesFractionalPixels(grow2, growperpx);
         
-        console.log(grow2/growperpx);
+        // console.log(grow2/growperpx);
 
         // console.log('grow1: '+grow1);
         // console.log('grow2: '+grow2);

@@ -3,7 +3,6 @@
     var hexChars:string[] = $derived( hexValue.toString(16).toUpperCase().padStart(8, '0').split('') );
     var cursorPos:number = $state(0);
 
-
     // let numVal = parseInt(val, 16) % 4294967296;
 
     function overwrite(event) {
@@ -11,7 +10,7 @@
         
         // Don't interfere with browser shortcuts and function keys
         if (event.ctrlKey || event.metaKey || event.altKey || 
-            key.startsWith('F') || // F1, F2, F3, etc.
+            (key.startsWith('F') && key.length != 1) || // F1, F2, F3, etc.
             ['Tab', 'Escape'].includes(key)) {
 
                 return; // Let the browser handle these
@@ -61,15 +60,17 @@
     }
 
     function updateChar(index:number, newChar:string) {
-        hexChars[index] = newChar;
-        hexValue = parseInt(hexChars.join(""), 16);
+        let chars = [...hexChars];
+        chars[index] = newChar;
+        hexValue = parseInt(chars.join(""), 16);
+        // console.log(hexValue);
     }
 
 </script>
 
 <!-- <input type="text" id="test" maxlength="9" pattern="[0-9A-F]{8}" bind:value={cpu.d[0]} > -->
 
-<div class="hex-editor" spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
+<div spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
     {#each hexChars as char, i}
       <span class:cursor={i === cursorPos} onclick={() => cursorPos = i} >
         {char}
@@ -87,7 +88,6 @@
         padding-right: 0.7ch;
         caret-color: transparent;
         display: flex;
-        box-shadow: inset 1px 1px 1px hsl(60, 2%, 24%), inset -1px -1px 0px #d4d0c8;
     }
 
     div span {
