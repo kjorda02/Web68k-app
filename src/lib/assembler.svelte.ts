@@ -1,6 +1,6 @@
 export var lineAddrs = {};
 export var addrLines = {};
-export var srecOutput;
+export var srecOutput:string;
 
 var lstOutput;
 var errOutput;

@@ -2,12 +2,11 @@
     import CodeMirror from "svelte-codemirror-editor";
     import { duotoneLight, duotoneLightInit, duotoneDark } from '@uiw/codemirror-theme-duotone';
     import { basicSetup } from 'codemirror';
-    import { EditorView, keymap, gutter, GutterMarker, lineNumbers } from '@codemirror/view';
-    import { EditorState, Compartment, StateEffect, EditorSelection } from "@codemirror/state"
-    import {indentWithTab, indentMore, indentLess} from "@codemirror/commands"
-    import Stack from "./Stack.svelte";
-    import { disableScrollHandling } from "$app/navigation";
+    import { EditorView, keymap, gutter, GutterMarker, lineNumbers, Decoration, ViewUpdate } from '@codemirror/view';
+    import { EditorState, Compartment, StateEffect, EditorSelection, StateField, Annotation, Facet } from "@codemirror/state"
+    import { indentMore, indentLess } from "@codemirror/commands"
     import { lineAddrs } from '$lib/assembler.svelte';
+    import { cpu } from '$lib/cpu.svelte';
 
     var { grow = $bindable()} = $props();
 
@@ -74,7 +73,6 @@ START:                  ; first instruction of program
         }
     }]);
 
-
     // --- SAVING -----------------------------------------------------------------
     var saved:Boolean = true;
     var stoppedWriting:Boolean = true;
@@ -136,9 +134,15 @@ START:                  ; first instruction of program
         addrGutters(false);
         editable = true;
         pointer="auto";
-        view.setState(savedState);
+        
+        let breakpoints = view.state.field(breakpointState); 
+        view.setState(savedState); // Restore cursor position and selections
+
         view.dispatch({
-            effects: scroll
+            effects: [
+                setAllBreakpointsEffect.of(breakpoints), // Keep new breakpoints
+                scroll // Restore scroll position
+            ]
         });
 
         // TODO: Set focus
@@ -148,6 +152,8 @@ START:                  ; first instruction of program
 
     //setTimeout(() => {editMode()}, 8000);
 
+
+    // --- ADDRESS GUTTERS -----------------------------------------------
     class AddressMarker extends GutterMarker {
         address:number;
 
@@ -160,7 +166,7 @@ START:                  ; first instruction of program
 
     let gutterCompartment = new Compartment;
 
-    const emptyLineGutter = [
+    const addressGutter = [
         
         gutter({
             class: "cm-addr-gutter",
@@ -184,29 +190,154 @@ START:                  ; first instruction of program
         })
     ];
 
-    const lineNumbersThemeing = [
+    export function addrGutters(enable: boolean) {
+        view.dispatch({
+            effects: gutterCompartment.reconfigure(enable ? addressGutter : [])
+        });
+
+        if (enable) {
+            // console.log(lineAddrs);
+            // console.log(lineAddrs['/MAIN.X68'][9]);
+            setBpAddrs();
+        }
+    }
+
+    // --- BREAKPOINTS -----------------------------------------------
+
+    const breakpointEffect = StateEffect.define<{pos: number, on: boolean}>({
+        map: (val, mapping) => ({pos: mapping.mapPos(val.pos), on: val.on})
+    });
+
+    const setAllBreakpointsEffect = StateEffect.define<Set<number>>();
+
+    const breakpointDecoration = Decoration.line({
+        attributes: { class: "cm-breakpoint-line" }
+    });
+
+    const breakpointState = StateField.define<Set<number>>({
+        create() { return new Set() },
+        update(set, transaction) {
+
+            if (transaction.docChanged) { // Map existing positions to account for document changes
+                let newSet = new Set<number>();
+
+                for (let pos of set) {
+                    newSet.add(transaction.changes.mapPos(pos));
+                }
+                return newSet;
+            }
+            
+            // Process breakpoint toggling effects
+            for (let e of transaction.effects) {
+                if (e.is(setAllBreakpointsEffect)) {
+                    return e.value; // Replace the entire set
+                }
+                if (e.is(breakpointEffect)) {
+                    let newSet = new Set<number>(set); // copy (need to change ref to trigger provide)
+
+                    if (e.value.on) {
+                        newSet.add(e.value.pos)
+                    } else {
+                        newSet.delete(e.value.pos)
+                    }
+
+                    return newSet;
+                }
+            }
+
+            return set;
+        },
+        // Runs whenever the set is updated
+        provide: f => EditorView.decorations.from(f, breakpoints => {
+            let decorations = []
+            for (let pos of breakpoints) {
+                decorations.push(breakpointDecoration.range(pos));
+            }
+            decorations.sort((a, b) => a.from - b.from);
+            return Decoration.set(decorations);
+        })
+    });
+
+    let lineNumberCompartment = new Compartment();
+
+    function toggleBreakpoint(view: EditorView, pos: number) {
+        const breakpoints = view.state.field(breakpointState);
+        const hasBreakpoint = breakpoints.has(pos);
+        
+        view.dispatch({
+            effects:  [
+                breakpointEffect.of({pos, on: !hasBreakpoint}), // Toggle breakpoint
+                lineNumberCompartment.reconfigure(createLineNumbers()) // Re-draw line numbers
+            ]
+        });
+    }
+
+    function createLineNumbers() {
+        return lineNumbers({
+            formatNumber(lineNo, state) {
+                if (lineNo > state.doc.lines) {return String(lineNo)} // initialSpacer call
+                
+                const line = state.doc.line(lineNo);
+                let breakpoints = state.field(breakpointState); // Get up-to-date breakpoints
+
+                if (breakpoints.has(line.from)) {
+                    return "💔";
+                }
+                
+                return String(lineNo);
+            },
+            domEventHandlers: {
+                mousedown(view, line) {
+                    if (!editable) {
+                        let num = view.state.doc.lineAt(line.from).number;
+                        if (lineAddrs['/MAIN.X68'][num]) {
+                            toggleBreakpoint(view, line.from);
+                            cpu.toggleBreakpoint(lineAddrs['/MAIN.X68'][num]);
+                        }
+                    }
+                    else {
+                        toggleBreakpoint(view, line.from); // Always use line's first positions for breakpoint
+                    }
+                    console.log(cpu.breakpoints);
+                    return true;
+                }
+            }
+        });
+    }
+
+    const myLineNumbers = [
+        lineNumberCompartment.of(createLineNumbers()),
+
         EditorView.baseTheme({
             ".cm-lineNumbers .cm-gutterElement": {
                 paddingLeft: "1em",
                 paddingRight: "0px",
-                textAlign: "right"
+                textAlign: "right",
+                cursor: "default"
+            },
+            ".cm-breakpoint-line": {
+                backgroundColor: "rgba(255, 0, 0, 0.1)"
             }
         })
     ];
-    
-    
 
-    export function addrGutters(enable: boolean) {
-        view.dispatch({
-            effects: gutterCompartment.reconfigure(enable ? emptyLineGutter : [])
-        });
+    function setBpAddrs() { // WRONG!!!!
+        const breakpoints = view.state.field(breakpointState);
+        const addrs = new Set<number>(); // Breakpoints addresses
 
-        if (enable) {
-            console.log(lineAddrs);
-            console.log(lineAddrs['/MAIN.X68'][9]);
+        for (let pos of breakpoints) {
+            let num = view.state.doc.lineAt(pos).number;
+            if (lineAddrs['/MAIN.X68'][num]) {
+                addrs.add(lineAddrs['/MAIN.X68'][num]);
+            }
+            else {
+                toggleBreakpoint(view, pos); // If no address associated, remove invalid breakpoint
+            }
         }
-    }
 
+        cpu.breakpoints = addrs;
+    }
+    
 </script>
 
 
@@ -214,7 +345,7 @@ START:                  ; first instruction of program
 
     
     <CodeMirror bind:value lang={null} {tabSize} lineWrapping={true} {editable}
-    basic={false} useTab={false} extensions={[gutterCompartment.of([]), lineNumbersThemeing, tab, updateListener, basicSetup ]} 
+    basic={false} useTab={false} extensions={[gutterCompartment.of([]), breakpointState, myLineNumbers, tab, updateListener, basicSetup]} 
     on:ready={(e) => { view = e.detail; } }
         
     theme={duotoneLightInit({

@@ -93,7 +93,9 @@
         border-radius: 3px;
         border: solid #858585 1px;
         overflow-y:hidden;
-        box-shadow: 3px 3px 4px hsl(60, 2%, 44%), inset 3px 3px 4px hsl(60, 2%, 44%);
+        overflow-x: auto;
+        
+        box-shadow: 3px 3px 4px hsl(60, 2%, 44%);
     }
 
     .displaymem {

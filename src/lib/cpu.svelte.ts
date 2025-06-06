@@ -70,6 +70,7 @@ class CPU {
     #sr: number = $state(0);
     #windowBaseAddr: number = $state(0);
     #memWindow: number[][] = $state([]); // Each row is 16 bytes
+    breakpoints = new Set<number>(); // Breakpoints addresses
 
     // Fetches new values from wasm module
     #update_values() {
@@ -218,6 +219,17 @@ class CPU {
 
         this.#update_window(0, toAddBefore);
         this.#update_window(this.#memWindow.length, size);
+    }
+
+    // For changing breakpoints once we've already assembled the program
+    toggleBreakpoint(addr:number) {
+        if (this.breakpoints.has(addr)) {
+            this.breakpoints.delete(addr);
+        }
+        else {
+            this.breakpoints.add(addr);
+        }
+        // TODO: Actually affect cpu
     }
 
     load(prog:string) {
