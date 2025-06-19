@@ -76,7 +76,7 @@
         flex-direction: column;
         height: 100vh;
         /* background: #E4E5E6; */
-        background: #a7a094;
+        background: #acacac;
     }
   
     #row {

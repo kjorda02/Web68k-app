@@ -77,6 +77,7 @@ class CPU {
         this.#d.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_D_regs(), 8));
         this.#a.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_A_regs(), 8));
         this.#sr = wasmcpu.read_sr();
+        this.cycles = wasmcpu.read_cycles();
     }
 
     #update_window(start = 0, end = this.#memWindow.length) { // end is exclusive
@@ -222,21 +223,22 @@ class CPU {
     }
 
     // For changing breakpoints once we've already assembled the program
-    toggleBreakpoint(addr:number) {
-        if (this.breakpoints.has(addr)) {
-            this.breakpoints.delete(addr);
-        }
-        else {
+    setBreakpoint(addr:number, val:boolean = !this.breakpoints.has(addr)) {
+        if (val) {
             this.breakpoints.add(addr);
         }
-        // TODO: Actually affect cpu
+        else {
+            this.breakpoints.delete(addr);
+        }
+        wasmcpu.set_breakpoint(addr, val);
     }
 
     load(prog:string) {
         const ptr:number = this.#alloc_str(prog);
-        wasmcpu.load_program(ptr);
+        const entryPoint = wasmcpu.load_program(ptr);
         wasmcpu.wasmfree(ptr);
         this.#update_window(); // update_values?
+        return entryPoint;
     }
 
     reset() {
@@ -245,14 +247,19 @@ class CPU {
         this.#update_window();
     }
 
-    run() {
+    run_burst(cycles:number, mode:number):boolean {
+        let breakpoint = wasmcpu.run_burst(cycles, mode);
+        this.#pc = wasmcpu.read_pc();
+        this.#update_values();
+        this.#update_window();
 
+        return breakpoint;
     }
 
     step_forwards(): number {
         this.#pc = wasmcpu.step_forwards();
-        this.#update_values();
-        this.#update_window();
+        // this.#update_values();
+        // this.#update_window();
         return this.#pc;
     }
 

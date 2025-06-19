@@ -260,6 +260,7 @@ START:                  ; first instruction of program
 
     let lineNumberCompartment = new Compartment();
 
+    // Toggles breakpoint in the editor's ui
     function toggleBreakpoint(view: EditorView, pos: number) {
         const breakpoints = view.state.field(breakpointState);
         const hasBreakpoint = breakpoints.has(pos);
@@ -288,17 +289,17 @@ START:                  ; first instruction of program
             },
             domEventHandlers: {
                 mousedown(view, line) {
-                    if (!editable) {
+                    if (!editable) { // If we have assembled the program and know the address of each line
                         let num = view.state.doc.lineAt(line.from).number;
-                        if (lineAddrs['/MAIN.X68'][num]) {
+                        if (lineAddrs['/MAIN.X68'][num]) { // Only add the breakpoint if that line has an address associated with it
                             toggleBreakpoint(view, line.from);
-                            cpu.toggleBreakpoint(lineAddrs['/MAIN.X68'][num]);
+                            cpu.setBreakpoint(lineAddrs['/MAIN.X68'][num]); // Toggles the breakpoint
                         }
                     }
                     else {
-                        toggleBreakpoint(view, line.from); // Always use line's first positions for breakpoint
+                        toggleBreakpoint(view, line.from); // Always use line's first position for breakpoint
                     }
-                    console.log(cpu.breakpoints);
+
                     return true;
                 }
             }
@@ -321,21 +322,21 @@ START:                  ; first instruction of program
         })
     ];
 
-    function setBpAddrs() { // WRONG!!!!
-        const breakpoints = view.state.field(breakpointState);
-        const addrs = new Set<number>(); // Breakpoints addresses
+    // Adds initial breakpoints after assembling program. More can be added after assembling
+    function setBpAddrs() {
+        const breakpoints = view.state.field(breakpointState); // Get breakpoints from codemirror
 
-        for (let pos of breakpoints) {
-            let num = view.state.doc.lineAt(pos).number;
+        for (let pos of breakpoints) { // For each breakpoint
+            let num = view.state.doc.lineAt(pos).number; // Get the line number
+
             if (lineAddrs['/MAIN.X68'][num]) {
-                addrs.add(lineAddrs['/MAIN.X68'][num]);
+                const addr = lineAddrs['/MAIN.X68'][num]; // Get the address of line
+                cpu.setBreakpoint(addr, true); // Add breakpoint to cpu
             }
             else {
-                toggleBreakpoint(view, pos); // If no address associated, remove invalid breakpoint
+                toggleBreakpoint(view, pos); // If no address associated, remove invalid breakpoint from ui
             }
         }
-
-        cpu.breakpoints = addrs;
     }
     
 </script>
