@@ -30,9 +30,9 @@
     var editorGrow:number = $state(3);
     var rightcolGrow:number = $state(2);
 
-    var emulatorGrow:number = $state(1);
-    var memGrow:number = $state(3);
-    var ioGrow:number = $state(2);
+    var emulatorGrow:number = $state(3);
+    var memGrow:number = $state(5);
+    var ioGrow:number = $state(4);
 
     var rightcolp = $state();
     var row = $state();
@@ -57,9 +57,9 @@
                 
                 <div id="rightcol" style:flex-grow={rightcolGrow} bind:this={rightcolp} >
                     <Emulator bind:grow={emulatorGrow} />
-                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={emulatorGrow} bind:grow2={memGrow} totalGrow={6} />
+                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={emulatorGrow} bind:grow2={memGrow} totalGrow={12} />
                     <Memory bind:grow={memGrow} />
-                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={memGrow} bind:grow2={ioGrow} totalGrow={6} />
+                    <Resizer horizontal={false} basis={8} parent={rightcolp} bind:grow1={memGrow} bind:grow2={ioGrow} totalGrow={12} />
                     <IO bind:grow={ioGrow} />
                 </div>
             </div>

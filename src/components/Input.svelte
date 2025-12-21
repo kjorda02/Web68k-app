@@ -1,6 +1,17 @@
 <script lang="ts">
-    var { hexValue = $bindable() }: {hexValue:number} = $props();
-    var hexChars:string[] = $derived( hexValue.toString(16).toUpperCase().padStart(8, '0').split('') );
+    var { hexValue = $bindable(), base }: {hexValue:number, base:number} = $props();
+    var chars:string[] = $derived.by(() => {
+        if (base== 16) {
+            return hexValue.toString(16).toUpperCase().padStart(8, '0').split('');
+        }
+        else if (base==10) {
+            return hexValue.toString(10).toUpperCase().padStart(8, '0').split('');
+        }
+        else if (base==2) {
+            return hexValue.toString(2).toUpperCase().padStart(16, '0').split('');
+        }
+    
+    });
     var cursorPos:number = $state(0);
 
     // let numVal = parseInt(val, 16) % 4294967296;
@@ -23,13 +34,13 @@
                 if (cursorPos > 0) { cursorPos--; }
                 break;
             case 'ArrowRight':
-                if (cursorPos < hexChars.length-1) { cursorPos++; }
+                if (cursorPos < chars.length-1) { cursorPos++; }
                 break;
             case 'Home':
                 cursorPos = 0;
                 break;
             case 'End':
-                cursorPos = hexChars.length-1;
+                cursorPos = chars.length-1;
                 break;
             case 'Backspace':
                 if (cursorPos > 0) {
@@ -41,28 +52,30 @@
                 updateChar(cursorPos, '0');
                 break;
             case 'ArrowUp':
-                let numU = parseInt(hexChars[cursorPos], 16);
-                numU = (numU+1) % 16;
-                updateChar(cursorPos, numU.toString(16));
+                let numU = parseInt(chars[cursorPos], base);
+                numU = (numU+1) % base;
+                updateChar(cursorPos, numU.toString(base));
                 break;
             case 'ArrowDown':
-                let numD = parseInt(hexChars[cursorPos], 16);
-                numD = (numD+15) % 16;
-                updateChar(cursorPos, numD.toString(16));
+                let numD = parseInt(chars[cursorPos], base);
+                numD = (numD+base-1) % base;
+                updateChar(cursorPos, numD.toString(base));
                 break;
             default:
-                if (/^[0-9A-Fa-f]$/.test(key)) {
+                if ( (base==16 && /^[0-9A-Fa-f]$/.test(key))
+                    || (base==10 && /^[0-9]$/.test(key)) 
+                    || (base==2 && /^[0-1]$/.test(key)) ) {
                     updateChar(cursorPos, key);
-                    if (cursorPos < 7) cursorPos++;
+                    if (cursorPos < chars.length -1) cursorPos++;
                 }
                 break;
         }
     }
 
     function updateChar(index:number, newChar:string) {
-        let chars = [...hexChars];
-        chars[index] = newChar;
-        hexValue = parseInt(chars.join(""), 16);
+        let newchars = [...chars];
+        newchars[index] = newChar;
+        hexValue = parseInt(newchars.join(""), base);
         // console.log(hexValue);
     }
 
@@ -71,10 +84,10 @@
 <!-- <input type="text" id="test" maxlength="9" pattern="[0-9A-F]{8}" bind:value={cpu.d[0]} > -->
 
 <div spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
-    {#each hexChars as char, i}
-      <span class:cursor={i === cursorPos} onclick={() => cursorPos = i} >
+    {#each chars as char, i}
+    <span class:cursor={i === cursorPos} onmousedown={() => cursorPos = i} >
         {char}
-      </span>
+    </span>
     {/each}
 </div>
 

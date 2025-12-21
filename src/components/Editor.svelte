@@ -115,6 +115,7 @@ START:                  ; first instruction of program
 
     }
 
+    // TODO: Make it so nothing is selected after exiting program?
     export function scrollToLine(lineNumber: number) {
 
         // Get the position of the start of the line

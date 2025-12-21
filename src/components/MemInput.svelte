@@ -131,7 +131,7 @@
             {#each line as num, j}
                 <div class="item">
                     {#each num as char, k}
-                        <span class:cursor={(i*32 + j*2 + k) === cursorPos} onclick={() => cursorPos = i*32 + j*2 + k}>
+                        <span class:cursor={(i*32 + j*2 + k) === cursorPos} onmousedown={() => cursorPos = i*32 + j*2 + k}>
                             {char}
                         </span>
                     {/each}

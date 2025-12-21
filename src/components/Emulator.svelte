@@ -10,36 +10,36 @@
     <div class="test">
         <div class="lines">
             <div class="lines">
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>D{i}=</span><div class="input"><Input bind:hexValue={cpu.d[i]} /></div>
+                            <span>D{i}=</span><div class="input"><Input bind:hexValue={cpu.d[i]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
             
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>D{i+2}=</span><div class="input"><Input bind:hexValue={cpu.d[i+2]} /></div>
+                            <span>D{i+2}=</span><div class="input"><Input bind:hexValue={cpu.d[i+2]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
             </div>
     
             <div class="lines">
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>D{i+4}=</span><div class="input"><Input bind:hexValue={cpu.d[i+4]} /></div>
+                            <span>D{i+4}=</span><div class="input"><Input bind:hexValue={cpu.d[i+4]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
         
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>D{i+6}=</span><div class="input"><Input bind:hexValue={cpu.d[i+6]} /></div>
+                            <span>D{i+6}=</span><div class="input"><Input bind:hexValue={cpu.d[i+6]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
@@ -48,41 +48,54 @@
     
         <div class="lines">
             <div class="lines">
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>A{i}=</span><div class="input"><Input bind:hexValue={cpu.a[i]} /></div>
+                            <span>A{i}=</span><div class="input"><Input bind:hexValue={cpu.a[i]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
             
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>A{i+2}=</span><div class="input"><Input bind:hexValue={cpu.a[i+2]} /></div>
+                            <span>A{i+2}=</span><div class="input"><Input bind:hexValue={cpu.a[i+2]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
             </div>
     
             <div class="lines">
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>A{i+4}=</span><div class="input"><Input bind:hexValue={cpu.a[i+4]} /></div>
+                            <span>A{i+4}=</span><div class="input"><Input bind:hexValue={cpu.a[i+4]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
         
-                <div class="line">
+                <div class="lines">
                     {#each {length: 2}, i}
                         <div class="reg">
-                            <span>A{i+6}=</span><div class="input"><Input bind:hexValue={cpu.a[i+6]} /></div>
+                            <span>A{i+6}=</span><div class="input"><Input bind:hexValue={cpu.a[i+6]} base={16} /></div>
                         </div>
                     {/each}
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="bottomline">
+            <div class="reg">
+                <span>PC=</span><div class="input"><Input bind:hexValue={cpu.pc} base={16} /></div>
+            </div>
+
+            <div class="col">
+                <div class="flags">T.S..INT...XNZVC</div>
+                <div class="reg">
+                    <span>SR=</span><div class="input"><Input bind:hexValue={cpu.sr} base={2} /></div>
+                </div>
+            </div>
     </div>
 
     
@@ -110,6 +123,15 @@
         position: relative;
     }
 
+    .flags {
+        text-align: right;
+        font-weight: bold;
+        font-family: monospace;
+        padding-right: 0.7ch;
+        margin-right: 6px;
+        line-height: 1;
+    }
+
     .input::after {
         content: '';
         position: absolute;
@@ -133,10 +155,17 @@
         justify-content: center;
     }
 
-    .line {
+    .col {
         display: flex;
+        flex-direction: column;
+    }
+
+    .bottomline {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-around;
         flex-wrap: wrap;
-        margin-bottom: 3px;
+        align-items:end;
     }
 
     .reg {
@@ -145,6 +174,7 @@
         display: flex;
         align-items: center;
         line-height: 1.5;
+        margin-bottom: 3px;
     }
 
     .test {

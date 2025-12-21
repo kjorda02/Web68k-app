@@ -25,8 +25,8 @@
 
         <div class="displaymem">
             <div class="left">
-                <div class="line toptitles">
-                    <Input bind:hexValue={cpu.windowBaseAddr}/>
+                <div class="line toptitles" style="border-left: 1px solid grey;">
+                    <Input bind:hexValue={cpu.windowBaseAddr} base={16} />
                 </div>
                 {#each {length: cpu.memWindow.length}, i}
                     <div class="line titles">{(cpu.windowBaseAddr + i*16).toString(16).toUpperCase().padStart(8, '0').substring(0, 7) + "X" }</div>
@@ -91,7 +91,8 @@
         flex-direction: column;
         height:100%;
         border-radius: 3px;
-        border: solid #858585 1px;
+        border-left: solid white 1px;
+        border-top: solid white 1px;
         overflow-y:hidden;
         overflow-x: auto;
         
