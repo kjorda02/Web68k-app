@@ -1,0 +1,153 @@
+@top Program { line* }
+
+line {
+Label space (Statement | Directive)? space? Comment? |
+"\n" space? (Statement | Directive)? space? Comment? |
+"\n" CommentLine 
+}
+
+Statement {
+  (Mnemonic | FlowMnemonic) ("." Suffix)? space Operand "," Operand
+}
+
+Directive {
+  DirectiveName ("." Suffix)? space DirectiveOperand ("," DirectiveOperand)*
+}
+
+DirectiveOperand {
+  expr | String
+}
+
+Operand {
+  "#" expr |
+  Absolute |
+  String |
+  AddressMode |
+  RegList
+}
+
+AddressMode {
+  "(" (Absolute | Areg) ")" |
+  Absolute "(" Areg ")" |
+  "-" "(" Areg ")" |
+  "(" Areg ")" "+"
+}
+
+Absolute { word | number }
+
+
+expr { (atom | signedatom) operandatom* }
+
+operandatom {
+  operand |
+  opstart expr ')'
+}
+
+signedatom {
+  signedvalue |
+  signstart expr ')'
+}
+
+atom {
+  value |
+  '(' expr ')'
+}
+
+Suffix {
+  "b" | "w" | "l" | "s" | "d" | "p" | "q" | "x" | 
+  "B" | "W" | "L" | "S" | "D" | "P" | "Q" | "X" 
+}
+
+Label { 
+  "\n" word |
+  "\n" space? label
+}
+
+RegList {RegRange ("/" RegRange)* }
+
+RegRange {
+  Reg "-" Reg |
+  Reg
+}
+
+// We do this so it doesn't get highlighted if it's not in the right place
+Reg {Areg | Dreg}
+
+// Use specialize so things like ccretc get recognized as a single word, rather than ccr register + etc word
+Dreg { @specialize<word, 
+  "d0" | "d1" | "d2" | "d3" | "d4" | "d5" | "d6" | "d7" |
+  "D0" | "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" |
+  "sr" | "sR" | "Sr" | "SR" |
+  "ccr" | "ccR" | "cCr" | "cCR" | "Ccr" | "CcR" | "CCr" | "CCR" |
+  "vbr" | "vbR" | "vBr" | "vBR" | "Vbr" | "VbR" | "VBr" | "VBR"
+> }
+Areg { @specialize<word, 
+   "a0" | "a1" | "a2" | "a3" | "a4" | "a5" | "a6" | "a7" |
+   "A0" | "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7" |
+   "sp" | "sP" | "Sp" | "SP" |
+   "pc" | "pC" | "Pc" | "PC" |
+   "usp" | "usP" | "uSp" | "uSP" | "Usp" | "UsP" | "USp" | "USP" |
+   "ssp" | "ssP" | "sSp" | "sSP" | "Ssp" | "SsP" | "SSp" | "SSP"
+> }
+
+// Use external tokenizer for case-insensitivity with keywords
+@external tokens externalKeywords from "./tokens" {
+  Mnemonic,
+  FlowMnemonic,
+  DirectiveName
+}
+
+@tokens {
+  Comment { ";" ![\n]* }
+  CommentLine { "*" ![\n]* }
+  
+  // Numbers
+  number {
+    "$" $[0-9a-fA-F]+ | // Hex
+    "%" $[01]+ |        // Binary
+    "@" $[0-7]+ |       // Octal
+    $[0-9]+             // Decimal
+  }
+
+  sign { "+" | "-" }
+
+  op { sign | "/" | "*" }
+
+  value { word | number }
+
+  signedvalue { sign value }
+
+  operand { op value }
+
+  opstart { op '(' }
+
+  signstart { sign '(' }
+
+
+  
+  String { "'" (!['\n] | "\\" _)* "'" | '"' (!["\n] | "\\" _)* '"' }
+
+  // Removed "." from here to avoid conflict with the dot separator
+  identifierChar { @asciiLetter | "_" }
+  
+  word { ("." | identifierChar) (identifierChar | @digit)* }
+
+  label { 
+  word ":"
+  }
+
+  space { $[ \t]+ }
+
+
+  
+  // Resolve conflict: Registers take priority over generic words
+  @precedence { label, word }
+}
+
+@external propSource highlighting from "./highlight.js"
+
+@detectDelim
+
+// --- Specialization Blocks (Keep these at the bottom of the file) ---
+
+

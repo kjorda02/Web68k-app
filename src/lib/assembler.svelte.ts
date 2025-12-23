@@ -42,6 +42,12 @@ function parseLst(output) {
 
 function parseSrec(output) {
     var match = output.match(/((?:S[0-9A-F]+\n)+)/);
+    
+    if (!match) {
+        console.error('INVALID SREC!!!')
+        console.log(output);
+        return '';
+    }
 
     return match[1];
 }

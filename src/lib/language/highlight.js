@@ -1,0 +1,27 @@
+import { styleTags, tags as t } from "@lezer/highlight";
+
+export const highlighting = styleTags({
+  "Mnemonic": t.keyword,
+  "DirectiveName": t.definitionKeyword,
+  "FlowMnemonic": t.controlKeyword,
+  "Dreg": t.variableName,
+  "Areg": t.variableName,
+  "Absolute": t.name,
+  "Label": t.labelName,
+  "DirectiveOperand": t.string,
+  "String": t.string,
+  "Immediate": t.operator,
+  "Comment CommentLine": t.lineComment,
+  "Suffix": t.modifier,
+  "AddressMode": t.punctuation,
+  "RegList": t.punctuation,
+  "RegRange": t.punctuation,
+  "Operand": t.operator,
+  "+": t.punctuation,
+  "-": t.punctuation,
+  "(": t.punctuation,
+  ")": t.punctuation,
+  ",": t.separator,
+  ".": t.punctuation,
+  "⚠": t.invalid,
+});

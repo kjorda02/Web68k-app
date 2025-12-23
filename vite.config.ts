@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	optimizeDeps: {
-        exclude: ["svelte-codemirror-editor", "codemirror", "@codemirror/state", "@codemirror/view", "@codemirror/language", "@codemirror/commands", "@codemirror/search", "@codemirror/autocomplete", "@codemirror/lint", "@uiw/codemirror-theme-duotone"],
+        exclude: ["svelte-codemirror-editor", "codemirror", "@codemirror/state", "@codemirror/view", "@codemirror/language", "@codemirror/commands", "@codemirror/search", "@codemirror/autocomplete", "@codemirror/lint", "@uiw/codemirror-theme-duotone", '@lezer/highlight'],
     },
 	plugins: [sveltekit(), tailwindcss()]
 });

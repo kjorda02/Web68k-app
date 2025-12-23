@@ -1,12 +1,14 @@
 <script lang="ts">
     import CodeMirror from "svelte-codemirror-editor";
-    import { duotoneLight, duotoneLightInit, duotoneDark } from '@uiw/codemirror-theme-duotone';
+    import { duotoneLight, duotoneLightInit, duotoneDark, duotoneDarkInit } from '@uiw/codemirror-theme-duotone';
     import { basicSetup } from 'codemirror';
     import { EditorView, keymap, gutter, GutterMarker, lineNumbers, Decoration, ViewUpdate } from '@codemirror/view';
-    import { EditorState, Compartment, StateEffect, EditorSelection, StateField, Annotation, Facet } from "@codemirror/state"
+    import { EditorState, Compartment, StateEffect, EditorSelection, StateField, Annotation, Facet, Prec } from "@codemirror/state"
     import { indentMore, indentLess } from "@codemirror/commands"
     import { lineAddrs } from '$lib/assembler.svelte';
     import { cpu } from '$lib/cpu.svelte';
+    import { m68k, m68kHighlightStyle } from "$lib/language/language";
+    import { syntaxHighlighting } from "@codemirror/language";
 
     var { grow = $bindable()} = $props();
 
@@ -347,7 +349,7 @@ START:                  ; first instruction of program
 
     
     <CodeMirror bind:value lang={null} {tabSize} lineWrapping={true} {editable}
-    basic={false} useTab={false} extensions={[gutterCompartment.of([]), breakpointState, myLineNumbers, tab, updateListener, basicSetup]} 
+    basic={false} useTab={false} extensions={[gutterCompartment.of([]), breakpointState, myLineNumbers, tab, updateListener, basicSetup, m68k(), Prec.high(syntaxHighlighting(m68kHighlightStyle))]} 
     on:ready={(e) => { view = e.detail; } }
         
     theme={duotoneLightInit({
