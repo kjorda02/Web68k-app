@@ -21,12 +21,11 @@ DirectiveOperand {
 Operand {
   "#" expr |
   Absolute |
-  String |
-  AddressMode |
-  RegList
+  addressmode |
+  reglist
 }
 
-AddressMode {
+addressmode {
   "(" (Absolute | Areg) ")" |
   Absolute "(" Areg ")" |
   "-" "(" Areg ")" |
@@ -63,9 +62,9 @@ Label {
   "\n" space? label
 }
 
-RegList {RegRange ("/" RegRange)* }
+reglist {regrange ("/" regrange)* }
 
-RegRange {
+regrange {
   Reg "-" Reg |
   Reg
 }
