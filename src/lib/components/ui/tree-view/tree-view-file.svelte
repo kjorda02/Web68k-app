@@ -59,10 +59,12 @@
         width: 100%;
         border-radius: 5px;
         overflow: hidden;
+		border: 1px solid transparent;
     }
 
-    .item:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+    .item:hover:not(.open) {
+        background-color: rgba(54, 119, 86, 0.08);
+		border: 1px solid var(--border);
     }
 
 	.details {
@@ -76,11 +78,16 @@
         display: flex;
     }
 
-	.details:hover {
-        background-color: rgba(0, 0, 0, 0.1);
+	:not(.open) .details:hover {
+        background-color: rgba(54, 119, 86, 0.2);
     }
 
 	.open {
-        background-color: rgba(0, 0, 0, 0.05);
-    }
+		background-color: var(--border);
+		color: white;
+	}
+
+	.open .details:hover {
+		background-color: rgb(74, 134, 105);
+	}
 </style>

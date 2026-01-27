@@ -43,7 +43,7 @@
         <Navbar {editor}/>
 
             <div id="row" bind:this={row}>
-                <Files width={sidebarWidth}/>
+                <Files width={sidebarWidth} {editor}/>
             
                 <div 
                     class="resizerh" 

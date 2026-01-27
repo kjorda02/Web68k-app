@@ -4,7 +4,28 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
-    import Details from '@lucide/svelte/icons/ellipsis-vertical';
+    import { EditorState } from "@codemirror/state"
+    import Editor from './Editor.svelte';
+
+    const DEFAULT_FILE = `*-----------------------------------------------------------
+* Title      :
+* Written by :
+* Date       :
+* Description:
+*-----------------------------------------------------------
+    ORG $1000
+    INCLUDE "folder/test.X68"
+ETI     DS.W    7
+START:                  ; first instruction of program
+    
+* Put program code here
+    
+    LEA  ETI,A0
+    MOVE.W  #1,(A0)
+
+    END START        ; last line of source
+`;
+
     type FileTree = {
         children?: {
             [key: string]: FileTree;
@@ -13,13 +34,19 @@
         path: string;
     }
 
-    let { width } = $props();
+    let { width, editor } : { width:number, editor:Editor} = $props();
 
-    let selectedName:string = $state(null);
-    let selected:FileTree = null;
-    let openFile = $state(null);
     const items = Object.keys(localStorage);
-    const tree = $state(generateTree("/"));
+    let tree = $state<FileTree>(generateTree("/"));
+    let initialized = false;
+
+    // Initialize once when editor becomes available
+    $effect(() => {
+        if (editor && !initialized) {
+            initEditor();
+            initialized = true;
+        }
+    });
 
     function generateTree(start: string) : FileTree {
         const tree : FileTree = {
@@ -34,7 +61,7 @@
             if (file) {
                 tree.children[file[1]] = {
                     path: file[0],
-                    content: {}
+                    content: null
                 };
             }
             else if (dir) {
@@ -44,7 +71,48 @@
         return tree;
     }
 
-    console.log(tree)
+    // --- HANDLE FILE SWITCHING AND SAVE/RESTORE -----------------------------------
+    let currentFile = $state<FileTree>(null);
+
+    function initEditor() {
+        editor.setSaveCallBack(save);
+        currentFile = getDefaultFile(tree);
+        switchFile(currentFile);
+    }
+
+    function save(state: EditorState) {
+        currentFile.content = state;
+        localStorage.setItem(currentFile.path, state.doc.toString());
+    }
+
+    // Finds a file to be selected at the start (needs to be recursive,
+    // could be there are no files on root level)
+    function getDefaultFile(root: FileTree) {
+        const file = Object.values(root.children).find(child => !child.children);
+        if (!file) {
+            const dir = Object.values(root.children).find(child => child.children);
+            return dir ? getDefaultFile(dir) : null;
+        }
+        return file;
+    }
+
+    function switchFile(targetFile:FileTree) {
+        if (targetFile.content) {
+            // File has been opened previously, restore editor state
+            editor.switchState(targetFile.content);
+        }
+        else {
+            // Need to load file from storage and create new editor state
+            const file = localStorage.getItem(targetFile.path);
+            const newState = editor.restoreState(file);
+            targetFile.content = newState;
+        }
+        currentFile = targetFile;
+    }
+
+    // --- HANDLE RIGHT CLICK ACTIONS ---------------------------------------------
+    let selectedName:string = $state(null);
+    let selected:FileTree = null;
 
     let create = $state(false);
     let createName:string = $state(null);
@@ -52,12 +120,11 @@
         const path = selected.path+createName;
         selected.children[createName] = {
             path: path,
-            content: {}
+            content: null
         }
-        localStorage.setItem(path, 'empty file')
+        localStorage.setItem(path, DEFAULT_FILE)
 
         create = false;
-        console.log(selected)
     }
 
     let rename = $state(false);
@@ -97,7 +164,7 @@
 {#snippet renderTree(root: FileTree)}
     {#each Object.entries(root.children) as [name, item]}
         {#if !item.children }
-            <TreeView.File {name} onclick={() => openFile=item} selected={openFile === item}>
+            <TreeView.File {name} onclick={() => switchFile(item)} selected={currentFile === item}>
                 {#snippet options()}
                     <ContextMenu.Item onclick={() => {selected = root; selectedName = name; rename = true} }>Rename</ContextMenu.Item>
                     <ContextMenu.Item onclick={() => handleDelete(item)}>Delete</ContextMenu.Item>
@@ -122,9 +189,11 @@
 {/snippet}
 
 <div class="files" style="width: {width}px">
+    {#if tree}
     <TreeView.Root>
         {@render renderTree(tree)}
     </TreeView.Root>
+    {/if}
 </div>
 
 <Dialog.Root bind:open={rename}>
@@ -156,7 +225,7 @@
 <style>
     .files {
         flex-shrink: 0;  /* IMPORTANTE!!! */
-        background: #f5f6f6; /* #faf8f5; */
+        background: #e7ffee; /* #faf8f5; */
         border-radius: 5px;
         height: 100%;
         padding: 1rem;

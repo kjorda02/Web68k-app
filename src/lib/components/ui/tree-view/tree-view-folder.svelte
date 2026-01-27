@@ -76,7 +76,7 @@
     }
 
     .item:hover {
-        background-color: rgba(0, 0, 0, 0.05);
+        background-color: rgba(54, 119, 86, 0.1);
     }
 
 	.details {
@@ -91,6 +91,6 @@
     }
 
 	.details:hover {
-        background-color: rgba(0, 0, 0, 0.1);
+        background-color: rgba(54, 119, 86, 0.2);
     }
 </style>

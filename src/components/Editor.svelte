@@ -3,8 +3,8 @@
     import { duotoneLight, duotoneLightInit, duotoneDark, duotoneDarkInit } from '@uiw/codemirror-theme-duotone';
     import { basicSetup } from 'codemirror';
     import { EditorView, keymap, gutter, GutterMarker, lineNumbers, Decoration, ViewUpdate } from '@codemirror/view';
-    import { EditorState, Compartment, StateEffect, EditorSelection, StateField, Annotation, Facet, Prec } from "@codemirror/state"
-    import { indentMore, indentLess } from "@codemirror/commands"
+    import { EditorState, Compartment, StateEffect, EditorSelection, StateField, Annotation, Facet, Prec } from "@codemirror/state";
+    import { indentMore, indentLess } from "@codemirror/commands";
     import { lineAddrs } from '$lib/assembler.svelte';
     import { cpu } from '$lib/cpu.svelte';
     import { m68k, m68kHighlightStyle } from "$lib/language/language";
@@ -18,31 +18,6 @@
     var editable:boolean = $state(true);
     var pointer:string = $state("auto");
     const tabSize:number = 4;
-
-    if (!localStorage.getItem('/MAIN.X68')) {
-        var code = `*-----------------------------------------------------------
-* Title      :
-* Written by :
-* Date       :
-* Description:
-*-----------------------------------------------------------
-    ORG $1000
-    INCLUDE "folder/test.X68"
-ETI     DS.W    7
-START:                  ; first instruction of program
-    
-* Put program code here
-    
-    LEA  ETI,A0
-    MOVE.W  #1,(A0)
-
-    END START        ; last line of source
-`;
-        localStorage.setItem('/MAIN.X68', code);
-    }
-
-    value = localStorage.getItem('/MAIN.X68');
-
 
     const tab = keymap.of([{
         key: "Tab",
@@ -75,9 +50,10 @@ START:                  ; first instruction of program
         }
     }]);
 
-    // --- SAVING -----------------------------------------------------------------
+    // --- SAVING/RESTORING ---------------------------------------------------------
     var saved:Boolean = true;
     var stoppedWriting:Boolean = true;
+    let save: (state: EditorState) => void;
     
     const updateListener = EditorView.updateListener.of(update => {
         if (update.docChanged) {
@@ -88,13 +64,34 @@ START:                  ; first instruction of program
 
     setInterval(() => {
         if (!saved && stoppedWriting) {
-            localStorage.setItem('/MAIN.X68', value);
+            //localStorage.setItem('/MAIN.X68', value);
+            save(view.state);
             saved = true;
         }
         
         stoppedWriting = true;
     }, 1000);
 
+    export function restoreState(file: string): EditorState {
+        const newState = EditorState.create({
+            doc: file,
+            extensions: extensions
+        });
+
+        save(view.state);
+        view.setState(newState);
+
+        return newState;
+    }
+
+    export function switchState(state: EditorState) {
+        save(view.state);
+        view.setState(state);
+    }
+
+    export function setSaveCallBack(func) {
+        save = func;
+    }
 
     // --- EXPORTS -----------------------------------------------------------------
     var savedState:EditorState;
@@ -108,7 +105,8 @@ START:                  ; first instruction of program
         if (!saved) { // Make sure assembler has latest changes
 
             // value doesn't update fast enough apparently so we use doc
-            localStorage.setItem('/MAIN.X68', view.state.doc.toString());
+            //localStorage.setItem('/MAIN.X68', view.state.doc.toString());
+            save(view.state);
             saved = true;
         }
 
@@ -342,6 +340,22 @@ START:                  ; first instruction of program
         }
     }
     
+    const extensions = [
+        gutterCompartment.of([]), 
+        breakpointState, 
+        myLineNumbers, 
+        tab, 
+        updateListener, 
+        basicSetup, 
+        m68k(), 
+        Prec.high(syntaxHighlighting(m68kHighlightStyle)),
+        duotoneLightInit({
+            settings: {
+                caret: '#c6c6c6',
+                fontFamily: 'monospace',
+            }
+        })
+    ];
 </script>
 
 
@@ -349,16 +363,9 @@ START:                  ; first instruction of program
 
     
     <CodeMirror bind:value lang={null} {tabSize} lineWrapping={true} {editable}
-    basic={false} useTab={false} extensions={[gutterCompartment.of([]), breakpointState, myLineNumbers, tab, updateListener, basicSetup, m68k(), Prec.high(syntaxHighlighting(m68kHighlightStyle))]} 
+    basic={false} useTab={false} extensions={extensions} 
     on:ready={(e) => { view = e.detail; } }
-        
-    theme={duotoneLightInit({
-        settings: {
-            caret: '#c6c6c6',
-            fontFamily: 'monospace',
-        }
-      })
-    }/>
+    />
 </div>
 
 <style>
