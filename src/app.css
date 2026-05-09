@@ -17,12 +17,12 @@
   --secondary: oklch(0.71 0.2252 143.95);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted-foreground: rgb(97, 69, 37);
+  --accent: rgba(97, 69, 37, 0.08);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: #b30202;
-  --border: rgb(54, 119, 86);
-  --input: oklch(0.922 0 0);
+  --border: rgb(97, 69, 37);
+  --input: rgb(97, 69, 37);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);

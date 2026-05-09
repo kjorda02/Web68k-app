@@ -1,32 +1,13 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import { assemble, srecOutput, addrLines } from '$lib/assembler.svelte';
     import Editor from './Editor.svelte';
+    import Files from './Files.svelte';
     import { cpu } from '$lib/cpu.svelte';
     import { Button } from "./ui/button";
-    
 
     var freq = 1000000; // Target frequency
-    var { editor }: { editor:Editor } = $props();
+    var { editor, files }: { editor:Editor, files:Files } = $props();
 
-    onMount(async () => {
-
-    var code = `
-SELVTX    DS.W  1
-EDITSTAT  DS.W  1
-    
-EDITINIT
-    CLR.W   (SELVTX)    
-    CLR.B   (EDITSTAT)     ; SELECT
-    RTS`;
-
-        localStorage.setItem('/folder/test.X68', code);
-        
-        // setTimeout(() => {console.log(code);}, 1000);
-        setTimeout(() => {}, 2000);
-    });
-
-    var entryFile= '/MAIN.X68';
     var cursor= $state("auto");
     var disabled = $state(false);
     var running = $state(false);
@@ -42,7 +23,7 @@ EDITINIT
 
         cursor="wait";
         disabled= true;
-        var error = await assemble(entryFile); // Disable clicking other buttons while assembling
+        var error = await assemble(files.getCurrentPath()); // Disable clicking other buttons while assembling
         disabled= false;
         cursor="auto";
 
@@ -107,25 +88,6 @@ EDITINIT
     }
 
     function stepBack() {
-
-    }
-
-    // function step() {
-    //     let pc:number = cpu.step_forwards();
-    //     if (!addrLines[pc]) {
-    //         console.log(pc);
-    //         running = false;
-    //         hasRun = true;
-    //         return;
-    //     }
-    //     editor.scrollToLine(addrLines[pc].line);
-    // }
-
-    function stepInto() {
-
-    }
-
-    function stepOut() {
 
     }
 

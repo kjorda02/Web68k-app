@@ -83,7 +83,7 @@
 
 <!-- <input type="text" id="test" maxlength="9" pattern="[0-9A-F]{8}" bind:value={cpu.d[0]} > -->
 
-<div spellcheck="false" onkeydown={overwrite} role="textbox" tabindex="0">
+<div spellcheck="false" onkeydown={overwrite} >
     {#each chars as char, i}
     <span class:cursor={i === cursorPos} onmousedown={() => cursorPos = i} >
         {char}

@@ -26,6 +26,7 @@
     }
 
     var editor:Editor =$state();
+    var files:Files =$state();
 
     var editorGrow:number = $state(3);
     var rightcolGrow:number = $state(2);
@@ -40,10 +41,10 @@
   </script>
   
     <div id="ev">
-        <Navbar {editor}/>
+        <Navbar {editor} {files}/>
 
             <div id="row" bind:this={row}>
-                <Files width={sidebarWidth} {editor}/>
+                <Files bind:this={files} width={sidebarWidth} {editor}/>
             
                 <div 
                     class="resizerh" 

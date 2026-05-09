@@ -63,7 +63,7 @@
     }
 
     .item:hover:not(.open) {
-        background-color: rgba(54, 119, 86, 0.08);
+        background-color: rgba(97, 69, 37, 0.08);
 		border: 1px solid var(--border);
     }
 
@@ -79,7 +79,7 @@
     }
 
 	:not(.open) .details:hover {
-        background-color: rgba(54, 119, 86, 0.2);
+        background-color: rgba(97, 69, 37, 0.2);
     }
 
 	.open {

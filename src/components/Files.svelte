@@ -4,8 +4,12 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
+    import * as Select from "$lib/components/ui/select/index.js";
+    import * as Popover from "$lib/components/ui/popover/index.js";
+    import DetailsIcon from '@lucide/svelte/icons/ellipsis-vertical';
     import { EditorState } from "@codemirror/state"
     import Editor from './Editor.svelte';
+    import { fromDate } from '@internationalized/date';
 
     const DEFAULT_FILE = `*-----------------------------------------------------------
 * Title      :
@@ -72,6 +76,7 @@ START:                  ; first instruction of program
     }
 
     // --- HANDLE FILE SWITCHING AND SAVE/RESTORE -----------------------------------
+    let currentProject = $state<string>('Default project');
     let currentFile = $state<FileTree>(null);
 
     function initEditor() {
@@ -108,6 +113,10 @@ START:                  ; first instruction of program
             targetFile.content = newState;
         }
         currentFile = targetFile;
+    }
+
+    export function getCurrentPath() {
+        return currentFile.path;
     }
 
     // --- HANDLE RIGHT CLICK ACTIONS ---------------------------------------------
@@ -189,6 +198,37 @@ START:                  ; first instruction of program
 {/snippet}
 
 <div class="files" style="width: {width}px">
+    
+    <div class="flex mb-2 gap-2">
+        <Select.Root type="single" bind:value={currentProject}>
+            <Select.Trigger class="grow" size="sm">
+                {currentProject}
+            </Select.Trigger>
+            <Select.Content>
+                <Select.Item value="DEFAULT">Light</Select.Item>
+                <Select.Item value="dark">Dark</Select.Item>
+                <Select.Item value="system">System</Select.Item>
+            </Select.Content>
+        </Select.Root>
+
+        <Popover.Root>
+            <Popover.Trigger>
+                <button class="button px-4">
+                    <DetailsIcon class="size-4" onclick={() => ''}/>
+                </button>
+            </Popover.Trigger>
+            <Popover.Content>
+                grdgdsg
+            </Popover.Content>
+          </Popover.Root>
+    </div>
+    
+
+    <!-- <div class="flex justify-between">
+        <button>New file</button>
+        <button>New folder</button>
+        <button>Options</button>
+    </div> -->
     {#if tree}
     <TreeView.Root>
         {@render renderTree(tree)}
@@ -225,7 +265,7 @@ START:                  ; first instruction of program
 <style>
     .files {
         flex-shrink: 0;  /* IMPORTANTE!!! */
-        background: #e7ffee; /* #faf8f5; */
+        background: #f1efeb; /* #e7ffee; */
         border-radius: 5px;
         height: 100%;
         padding: 1rem;
@@ -233,5 +273,18 @@ START:                  ; first instruction of program
 
     .files :global(button) {
         cursor: pointer;
+    }
+
+    button {
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 2px 5px 2px 5px;
+        font-weight: 500;
+        background: rgba(97, 69, 37, 0.08);
+    }
+
+    button:hover {
+        color: white;
+        background: var(--border);
     }
 </style>
