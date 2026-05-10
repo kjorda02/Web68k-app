@@ -40,6 +40,10 @@ START:                  ; first instruction of program
 
     let { width, editor } : { width:number, editor:Editor} = $props();
 
+    if (Object.keys(localStorage).length === 0) {
+        localStorage.setItem('/MAIN.X68', DEFAULT_FILE);
+    }
+
     const items = Object.keys(localStorage);
     let tree = $state<FileTree>(generateTree("/"));
     let initialized = false;
@@ -81,11 +85,11 @@ START:                  ; first instruction of program
 
     function initEditor() {
         editor.setSaveCallBack(save);
-        currentFile = getDefaultFile(tree);
-        switchFile(currentFile);
+        switchFile(getDefaultFile(tree));
     }
 
     function save(state: EditorState) {
+        if (!currentFile) return;
         currentFile.content = state;
         localStorage.setItem(currentFile.path, state.doc.toString());
     }
@@ -113,10 +117,27 @@ START:                  ; first instruction of program
             targetFile.content = newState;
         }
         currentFile = targetFile;
+        editor.setCurrentFilePath(targetFile.path);
     }
 
     export function getCurrentPath() {
         return currentFile.path;
+    }
+
+    function findFileByPath(root: FileTree, path: string): FileTree | null {
+        for (const item of Object.values(root.children ?? {})) {
+            if (!item.children && item.path === path) return item;
+            if (item.children) {
+                const found = findFileByPath(item, path);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    export function switchToPath(path: string) {
+        const file = findFileByPath(tree, path);
+        if (file) switchFile(file);
     }
 
     // --- HANDLE RIGHT CLICK ACTIONS ---------------------------------------------

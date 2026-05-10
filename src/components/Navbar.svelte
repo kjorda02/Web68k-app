@@ -36,7 +36,11 @@
             console.log(srecOutput);
             const entryPoint = cpu.load(srecOutput);
             editor.addrGutters(true);
-            editor.scrollToLine(addrLines[entryPoint].line);
+            const { src, line } = addrLines[entryPoint];
+            if (src !== files.getCurrentPath()) {
+                files.switchToPath(src);
+            }
+            editor.scrollToLine(line);
         }
     }
 
@@ -62,7 +66,11 @@
                 break;
             }
 
-            editor.scrollToLine(addrLines[cpu.pc].line);
+            const { src, line } = addrLines[cpu.pc];
+            if (src !== files.getCurrentPath()) {
+                files.switchToPath(src);
+            }
+            editor.scrollToLine(line);
             if (breakpoint) { break; } // Reached breakpoint
             
             let cputime = ((cpu.cycles - startCycles)/freq)*1000; // in milliseconds as well

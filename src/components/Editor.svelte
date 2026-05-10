@@ -94,6 +94,12 @@
     }
 
     // --- EXPORTS -----------------------------------------------------------------
+    let currentFilePath = $state<string>(null);
+
+    export function setCurrentFilePath(path: string) {
+        currentFilePath = path;
+    }
+
     var savedState:EditorState;
     var scroll;
 
@@ -171,14 +177,12 @@
         
         gutter({
             class: "cm-addr-gutter",
-            lineMarker(view, line) {;
+            lineMarker(view, line) {
                 const lineNumber = view.state.doc.lineAt(line.from).number;
-                if (lineAddrs['/MAIN.X68'][lineNumber]) {
-                    return new AddressMarker(lineAddrs['/MAIN.X68'][lineNumber]);
+                if (lineAddrs[currentFilePath]?.[lineNumber]) {
+                    return new AddressMarker(lineAddrs[currentFilePath][lineNumber]);
                 }
-                else {
-                    return null;
-                }
+                return null;
             },
             initialSpacer: () => new AddressMarker(1)
         }),
@@ -292,9 +296,9 @@
                 mousedown(view, line) {
                     if (!editable) { // If we have assembled the program and know the address of each line
                         let num = view.state.doc.lineAt(line.from).number;
-                        if (lineAddrs['/MAIN.X68'][num]) { // Only add the breakpoint if that line has an address associated with it
+                        if (lineAddrs[currentFilePath]?.[num]) { // Only add the breakpoint if that line has an address associated with it
                             toggleBreakpoint(view, line.from);
-                            cpu.setBreakpoint(lineAddrs['/MAIN.X68'][num]); // Toggles the breakpoint
+                            cpu.setBreakpoint(lineAddrs[currentFilePath][num]); // Toggles the breakpoint
                         }
                     }
                     else {
@@ -330,8 +334,8 @@
         for (let pos of breakpoints) { // For each breakpoint
             let num = view.state.doc.lineAt(pos).number; // Get the line number
 
-            if (lineAddrs['/MAIN.X68'][num]) {
-                const addr = lineAddrs['/MAIN.X68'][num]; // Get the address of line
+            if (lineAddrs[currentFilePath]?.[num]) {
+                const addr = lineAddrs[currentFilePath][num]; // Get the address of line
                 cpu.setBreakpoint(addr, true); // Add breakpoint to cpu
             }
             else {
