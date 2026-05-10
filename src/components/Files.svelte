@@ -18,15 +18,11 @@
 * Description:
 *-----------------------------------------------------------
     ORG $1000
-    INCLUDE "folder/test.X68"
-ETI     DS.W    7
+
 START:                  ; first instruction of program
     
 * Put program code here
     
-    LEA  ETI,A0
-    MOVE.W  #1,(A0)
-
     END START        ; last line of source
 `;
 
@@ -106,6 +102,7 @@ START:                  ; first instruction of program
     }
 
     function switchFile(targetFile:FileTree) {
+        editor.setCurrentFilePath(targetFile.path);
         if (targetFile.content) {
             // File has been opened previously, restore editor state
             editor.switchState(targetFile.content);
@@ -117,7 +114,6 @@ START:                  ; first instruction of program
             targetFile.content = newState;
         }
         currentFile = targetFile;
-        editor.setCurrentFilePath(targetFile.path);
     }
 
     export function getCurrentPath() {

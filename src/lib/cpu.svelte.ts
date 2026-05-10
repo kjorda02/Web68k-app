@@ -76,6 +76,7 @@ class CPU {
     #update_values() {
         this.#d.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_D_regs(), 8));
         this.#a.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_A_regs(), 8));
+        this.#pc = wasmcpu.read_pc();
         this.#sr = wasmcpu.read_sr();
         this.cycles = wasmcpu.read_cycles();
     }

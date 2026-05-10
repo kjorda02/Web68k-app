@@ -17,7 +17,8 @@ function parseLst(output) {
         //                        ^^^^^^^^^-Want this
         const sourceMatch = line.match(/^Source:\s+"([^"]+)"/);
         if (sourceMatch) {
-            currentFile = sourceMatch[1];
+            const raw = sourceMatch[1];
+            currentFile = raw.startsWith('/') ? raw : '/' + raw;
             if (!addrs[currentFile]) {
                 addrs[currentFile] = {};
             }
