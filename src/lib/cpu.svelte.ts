@@ -72,6 +72,15 @@ class CPU {
     #memWindow: number[][] = $state([]); // Each row is 16 bytes
     breakpoints = new Set<number>(); // Breakpoints addresses
 
+    #displayAddr: number = $state(14680064); // 0xE00000
+    #ledsAddr:    number = $state(14680080); // 0xE00010
+    #switchesAddr:number = $state(14680082); // 0xE00012
+    #buttonsAddr: number = $state(14680084); // 0xE00014
+    #display: number[] = $state([0, 0, 0, 0, 0, 0, 0, 0]);
+    #leds:    number   = $state(0);
+    #switches:number   = $state(255);
+    #buttons: number   = $state(255);
+
     // Fetches new values from wasm module
     #update_values() {
         this.#d.splice(0, 8, ...new Uint32Array(wasmcpu.memory.buffer, wasmcpu.read_D_regs(), 8));
@@ -79,6 +88,18 @@ class CPU {
         this.#pc = wasmcpu.read_pc();
         this.#sr = wasmcpu.read_sr();
         this.cycles = wasmcpu.read_cycles();
+        this.#update_display();
+        this.#update_leds();
+    }
+
+    #update_display() {
+        const ptr = wasmcpu.read_mem_window(this.#displayAddr, 8);
+        this.#display.splice(0, 8, ...new Uint8Array(wasmcpu.memory.buffer, ptr, 8));
+    }
+
+    #update_leds() {
+        const ptr = wasmcpu.read_mem_window(this.#ledsAddr, 1);
+        this.#leds = new Uint8Array(wasmcpu.memory.buffer, ptr, 1)[0];
     }
 
     #update_window(start = 0, end = this.#memWindow.length) { // end is exclusive
@@ -171,6 +192,33 @@ class CPU {
         this.#update_window(size -prev, size);
     }
 
+    get displayAddr() { return this.#displayAddr; }
+    set displayAddr(val:number) { this.#displayAddr = val; if (wasmcpu) this.#update_display(); }
+
+    get ledsAddr() { return this.#ledsAddr; }
+    set ledsAddr(val:number) { this.#ledsAddr = val; if (wasmcpu) this.#update_leds(); }
+
+    get switchesAddr() { return this.#switchesAddr; }
+    set switchesAddr(val:number) { this.#switchesAddr = val; if (wasmcpu) wasmcpu.write_mem(val, 0, this.#switches); }
+
+    get buttonsAddr() { return this.#buttonsAddr; }
+    set buttonsAddr(val:number) { this.#buttonsAddr = val; if (wasmcpu) wasmcpu.write_mem(val, 0, this.#buttons); }
+
+    get display() { return this.#display; }
+    get leds() { return this.#leds; }
+
+    get switches() { return this.#switches; }
+    set switches(val:number) {
+        this.#switches = val;
+        if (wasmcpu) { wasmcpu.write_mem(this.#switchesAddr, 0, val); this.#update_window(); }
+    }
+
+    get buttons() { return this.#buttons; }
+    set buttons(val:number) {
+        this.#buttons = val;
+        if (wasmcpu) { wasmcpu.write_mem(this.#buttonsAddr, 0, val); this.#update_window(); }
+    }
+
     memWindow = new Proxy(this.#memWindow, {
         get: (target, row) => {
             if (row === 'length') { return target.length; }
@@ -188,6 +236,8 @@ class CPU {
                     addr += c;
                     
                     wasmcpu.write_mem(addr, 0, val);
+                    if (addr >= this.#displayAddr && addr < this.#displayAddr + 8) this.#update_display();
+                    else if (addr === this.#ledsAddr) this.#update_leds();
                     return true;
                 }
             });
@@ -246,6 +296,9 @@ class CPU {
         wasmcpu.initCpu(); // Initializes register and RAM with 0s
         this.#update_values();
         this.#update_window();
+        // Re-write input device state — initCpu zeroes all memory
+        wasmcpu.write_mem(this.#switchesAddr, 0, this.#switches);
+        wasmcpu.write_mem(this.#buttonsAddr,  0, this.#buttons);
     }
 
     run_burst(cycles:number, mode:number):boolean {

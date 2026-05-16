@@ -1,21 +1,20 @@
 <script lang="ts">
     import Input  from './Input.svelte';
     import { onMount } from 'svelte';
+    import { cpu } from '$lib/cpu.svelte';
 
     var { grow = $bindable()} = $props();
-    var digits:number[] = $state([1, 2, 4, 8, 16, 32, 64, 128]);
-    var leds:number = $state(69);
-    var switches:number = $state(255);
-    var buttons:number = $state(255);
-
-    var displayBaseAddr:number = $state(14680064); //0xE00000
-    var ledsBaseAddr:number = $state(14680080); //0xE00010
-    var switchesBaseAddr:number = $state(14680082); //0xE00012
-    var buttonsBaseAddr:number = $state(14680084); //0xE00014
     var autoInterval:number = $state(1000);
+    var buttonTimers: ReturnType<typeof setTimeout>[] = new Array(8).fill(undefined);
+
+    function pressButton(i: number) {
+        cpu.buttons &= ~(128>>i);
+        clearTimeout(buttonTimers[i]);
+        buttonTimers[i] = setTimeout(() => { cpu.buttons |= (128>>i); }, 1000);
+    }
 
     onMount(() => {
-        // Preload switch images 
+        // Preload switch images
         const preloadImages = ['/switch_on.png', '/switch_off.png'];
         preloadImages.forEach(src => {
             const img = new Image();
@@ -31,46 +30,46 @@
             <div id="display">
                 {#each {length: 8}, i}
                     <div class="digit">
-                        <div class="hsegment s0" class:on={digits[i] & (1<<0)} class:off={(digits[i] & (1<<0)) == 0}></div>
-                        <div class="vsegment s1" class:on={digits[i] & (1<<1)} class:off={(digits[i] & (1<<1)) == 0}></div>
-                        <div class="vsegment s2" class:on={digits[i] & (1<<2)} class:off={(digits[i] & (1<<2)) == 0}></div>
-                        <div class="hsegment s3" class:on={digits[i] & (1<<3)} class:off={(digits[i] & (1<<3)) == 0}></div>
-                        <div class="vsegment s4" class:on={digits[i] & (1<<4)} class:off={(digits[i] & (1<<4)) == 0}></div>
-                        <div class="vsegment s5" class:on={digits[i] & (1<<5)} class:off={(digits[i] & (1<<5)) == 0}></div>
-                        <div class="hsegment s6" class:on={digits[i] & (1<<6)} class:off={(digits[i] & (1<<6)) == 0}></div>
-                        <div class="dotsegment" class:on={digits[i] & (1<<7)} class:off={(digits[i] & (1<<7)) == 0}></div>
+                        <div class="hsegment s0" class:on={cpu.display[i] & (1<<0)} class:off={(cpu.display[i] & (1<<0)) == 0}></div>
+                        <div class="vsegment s1" class:on={cpu.display[i] & (1<<1)} class:off={(cpu.display[i] & (1<<1)) == 0}></div>
+                        <div class="vsegment s2" class:on={cpu.display[i] & (1<<2)} class:off={(cpu.display[i] & (1<<2)) == 0}></div>
+                        <div class="hsegment s3" class:on={cpu.display[i] & (1<<3)} class:off={(cpu.display[i] & (1<<3)) == 0}></div>
+                        <div class="vsegment s4" class:on={cpu.display[i] & (1<<4)} class:off={(cpu.display[i] & (1<<4)) == 0}></div>
+                        <div class="vsegment s5" class:on={cpu.display[i] & (1<<5)} class:off={(cpu.display[i] & (1<<5)) == 0}></div>
+                        <div class="hsegment s6" class:on={cpu.display[i] & (1<<6)} class:off={(cpu.display[i] & (1<<6)) == 0}></div>
+                        <div class="dotsegment" class:on={cpu.display[i] & (1<<7)} class:off={(cpu.display[i] & (1<<7)) == 0}></div>
                     </div>
                 {/each}
             </div>
-    
+
             <div class="addr">
                 <b>Address</b>
                 <div class="input">
-                    <Input bind:hexValue={displayBaseAddr} base={16} />
+                    <Input bind:hexValue={cpu.displayAddr} base={16} />
                 </div>
             </div>
         </div>
-    
+
         <div class="row">
             <div id="leds">
                 {#each {length: 8}, i}
-                        <div class="led" class:on={leds & (128>>i)} class:off={(leds & (128>>i)) == 0}></div>
+                        <div class="led" class:on={cpu.leds & (128>>i)} class:off={(cpu.leds & (128>>i)) == 0}></div>
                 {/each}
             </div>
-    
+
             <div class="addr">
                 <b>Address</b>
                 <div class="input">
-                    <Input bind:hexValue={ledsBaseAddr} base={16} />
+                    <Input bind:hexValue={cpu.ledsAddr} base={16} />
                 </div>
             </div>
         </div>
-    
+
         <div class="row">
             <div class="switches">
                 {#each {length: 8}, i}
-                    <button onclick={() => switches ^= (128>>i)}>
-                        {#if switches & (128>>i) }
+                    <button onclick={() => cpu.switches ^= (128>>i)}>
+                        {#if cpu.switches & (128>>i) }
                             <img src="/switch_on.png"/>
                         {:else}
                             <img src="/switch_off.png"/>
@@ -78,28 +77,28 @@
                     </button>
                 {/each}
             </div>
-    
+
             <div class="addr">
                 <b>Address</b>
                 <div class="input">
-                    <Input bind:hexValue={switchesBaseAddr} base={16} />
+                    <Input bind:hexValue={cpu.switchesAddr} base={16} />
                 </div>
             </div>
         </div>
-    
+
         <div class="row">
             <div class="switches">
                 {#each {length: 8}, i}
-                    <button onmousedown={() => buttons &= ~(128>>i)} onmouseup={() => buttons |= (128>>i)} >
+                    <button onclick={() => pressButton(i)}>
                         <img src="/button.png"/>
                     </button>
                 {/each}
             </div>
-    
+
             <div class="addr">
                 <b>Address</b>
                 <div class="input">
-                    <Input bind:hexValue={buttonsBaseAddr} base={16} />
+                    <Input bind:hexValue={cpu.buttonsAddr} base={16} />
                 </div>
             </div>
         </div>
