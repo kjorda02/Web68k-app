@@ -4,12 +4,9 @@
     import * as Dialog from "$lib/components/ui/dialog/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
     import { Button } from "$lib/components/ui/button/index.js";
-    import * as Select from "$lib/components/ui/select/index.js";
-    import * as Popover from "$lib/components/ui/popover/index.js";
-    import DetailsIcon from '@lucide/svelte/icons/ellipsis-vertical';
     import { EditorState } from "@codemirror/state"
     import Editor from './Editor.svelte';
-    import { fromDate } from '@internationalized/date';
+    import JSZip from 'jszip';
 
     const DEFAULT_FILE = `*-----------------------------------------------------------
 * Title      :
@@ -76,7 +73,6 @@ START:                  ; first instruction of program
     }
 
     // --- HANDLE FILE SWITCHING AND SAVE/RESTORE -----------------------------------
-    let currentProject = $state<string>('Default project');
     let currentFile = $state<FileTree>(null);
 
     function initEditor() {
@@ -141,16 +137,20 @@ START:                  ; first instruction of program
     let selected:FileTree = null;
 
     let create = $state(false);
+    let createIsFolder = $state(false);
     let createName:string = $state(null);
     function handleCreate() {
-        const path = selected.path+createName;
-        selected.children[createName] = {
-            path: path,
-            content: null
+        if (createIsFolder) {
+            const path = selected.path+createName+'/';
+            selected.children[createName] = { path, children: {} };
+        } else {
+            const path = selected.path+createName;
+            selected.children[createName] = { path, content: null };
+            localStorage.setItem(path, DEFAULT_FILE);
         }
-        localStorage.setItem(path, DEFAULT_FILE)
 
         create = false;
+        createName = null;
     }
 
     let rename = $state(false);
@@ -174,16 +174,103 @@ START:                  ; first instruction of program
         rename = false;
     }
 
-    let deleteItem = $state(false);
-    function handleDelete(selected) {
-        console.log('Delete item:', selected);
-        // Implement delete logic
+    function deleteFolder(folder: FileTree) {
+        for (const child of Object.values(folder.children)) {
+            if (!child.children) localStorage.removeItem(child.path);
+            else deleteFolder(child);
+        }
+    }
+
+    let deleteConfirm = $state(false);
+    let deletePending: { parent: FileTree, name: string } | null = null;
+
+    function handleDelete(parent: FileTree, name: string) {
+        deletePending = { parent, name };
+        deleteConfirm = true;
+    }
+
+    function confirmDelete() {
+        const { parent, name } = deletePending!;
+        const item = parent.children[name];
+        if (!item.children) {
+            localStorage.removeItem(item.path);
+            if (currentFile === item) {
+                const other = Object.values(parent.children).find(c => c !== item && !c.children)
+                    ?? getDefaultFile(tree);
+                if (other && other !== item) switchFile(other);
+                else currentFile = null;
+            }
+        } else {
+            deleteFolder(item);
+        }
+        delete parent.children[name];
+        deleteConfirm = false;
+        deletePending = null;
     }
 
     
-    function handleDownload(selected) {
-        console.log('Download item:', selected);
-        // Implement download logic
+    function handleDownload(item: FileTree) {
+        if (!item.children) {
+            const content = localStorage.getItem(item.path) ?? item.content?.doc.toString() ?? '';
+            const filename = item.path.split('/').at(-1)!;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        } else {
+            const zip = new JSZip();
+            collectFiles(item, item.path, zip);
+            const folderName = item.path.replace(/\/$/, '').split('/').at(-1) || 'archive';
+            zip.generateAsync({ type: 'blob' }).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = folderName + '.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    }
+
+    function collectFiles(node: FileTree, rootPath: string, zip: JSZip) {
+        for (const child of Object.values(node.children)) {
+            if (!child.children) {
+                const content = localStorage.getItem(child.path) ?? child.content?.doc.toString() ?? '';
+                zip.file(child.path.slice(rootPath.length), content);
+            } else {
+                collectFiles(child, rootPath, zip);
+            }
+        }
+    }
+
+    function openFilePicker(folder = false) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        if (folder) input.setAttribute('webkitdirectory', '');
+        else input.multiple = true;
+        input.onchange = async () => {
+            for (const file of Array.from(input.files ?? [])) {
+                const parts = folder
+                    ? (file as any).webkitRelativePath.split('/')  // keep top-level folder name
+                    : [file.name];
+                let node = selected;
+                for (const part of parts.slice(0, -1)) {
+                    if (!node.children[part]) {
+                        node.children[part] = { path: node.path + part + '/', children: {} };
+                    }
+                    node = node.children[part];
+                }
+                const filename = parts.at(-1)!;
+                const path = node.path + filename;
+                node.children[filename] = { path, content: null };
+                localStorage.setItem(path, await file.text());
+            }
+            create = false;
+        };
+        input.click();
     }
 </script>
 
@@ -193,7 +280,7 @@ START:                  ; first instruction of program
             <TreeView.File {name} onclick={() => switchFile(item)} selected={currentFile === item}>
                 {#snippet options()}
                     <ContextMenu.Item onclick={() => {selected = root; selectedName = name; rename = true} }>Rename</ContextMenu.Item>
-                    <ContextMenu.Item onclick={() => handleDelete(item)}>Delete</ContextMenu.Item>
+                    <ContextMenu.Item onclick={() => handleDelete(root, name)}>Delete</ContextMenu.Item>
                     <ContextMenu.Item onclick={() => handleDownload(item)}>Download</ContextMenu.Item>
                 {/snippet}
             </TreeView.File>
@@ -202,11 +289,11 @@ START:                  ; first instruction of program
                 {@render renderTree(item)}
 
                 {#snippet options()}
-                    <ContextMenu.Item onclick={() => {selected = item; selectedName = name; create = true;} }>New File</ContextMenu.Item>
-                    <ContextMenu.Item onclick={() => {selected = item; selectedName = name; create = true}}>New Folder</ContextMenu.Item>
+                    <ContextMenu.Item onclick={() => {selected = item; selectedName = name; createIsFolder = false; create = true;} }>New File</ContextMenu.Item>
+                    <ContextMenu.Item onclick={() => {selected = item; selectedName = name; createIsFolder = true; create = true}}>New Folder</ContextMenu.Item>
                     <ContextMenu.Separator />
                     <ContextMenu.Item onclick={() => rename = true}>Rename folder</ContextMenu.Item>
-                    <ContextMenu.Item onclick={() => handleDelete(item)}>Delete recursively</ContextMenu.Item>
+                    <ContextMenu.Item onclick={() => handleDelete(root, name)}>Delete recursively</ContextMenu.Item>
                     <ContextMenu.Item onclick={() => handleDownload(item)}>Download as Zip</ContextMenu.Item>
                 {/snippet}
             </TreeView.Folder>
@@ -217,35 +304,9 @@ START:                  ; first instruction of program
 <div class="files" style="width: {width}px">
     
     <div class="flex mb-2 gap-2">
-        <Select.Root type="single" bind:value={currentProject}>
-            <Select.Trigger class="grow" size="sm">
-                {currentProject}
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Item value="DEFAULT">Light</Select.Item>
-                <Select.Item value="dark">Dark</Select.Item>
-                <Select.Item value="system">System</Select.Item>
-            </Select.Content>
-        </Select.Root>
-
-        <Popover.Root>
-            <Popover.Trigger>
-                <button class="button px-4">
-                    <DetailsIcon class="size-4" onclick={() => ''}/>
-                </button>
-            </Popover.Trigger>
-            <Popover.Content>
-                grdgdsg
-            </Popover.Content>
-          </Popover.Root>
+        <button class="button grow" onclick={() => { selected = tree; selectedName = '/'; create = true; createIsFolder = false; }}>New file</button>
+        <button class="button grow" onclick={() => { selected = tree; selectedName = '/'; create = true; createIsFolder = true; }}>New folder</button>
     </div>
-    
-
-    <!-- <div class="flex justify-between">
-        <button>New file</button>
-        <button>New folder</button>
-        <button>Options</button>
-    </div> -->
     {#if tree}
     <TreeView.Root>
         {@render renderTree(tree)}
@@ -269,17 +330,52 @@ START:                  ; first instruction of program
 <Dialog.Root bind:open={create}>
     <Dialog.Content>
         <Dialog.Header>
-        <Dialog.Title>New File in {selectedName}</Dialog.Title>
+        <Dialog.Title>{createIsFolder ? 'New Folder' : 'New File'} in {selectedName}</Dialog.Title>
         </Dialog.Header>
         <Input bind:value={createName} />
+        <div class="upload-row">
+            <span class="or-divider">or</span>
+            <Button variant="outline" onclick={() => openFilePicker(createIsFolder)}>
+                Upload {createIsFolder ? 'folder' : 'file'}
+            </Button>
+        </div>
         <Dialog.Footer>
             <Button variant="outline" onclick={() => create = false}>Cancel</Button>
-            <Button type="submit" onclick={() => handleCreate()}>Create file</Button>
+            <Button type="submit" onclick={() => handleCreate()}>{createIsFolder ? 'Create folder' : 'Create file'}</Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={deleteConfirm}>
+    <Dialog.Content>
+        <Dialog.Header>
+        <Dialog.Title>Delete {deletePending?.name}?</Dialog.Title>
+        <Dialog.Description>
+            {deletePending?.parent.children[deletePending.name]?.children
+                ? 'This will permanently delete the folder and all its contents.'
+                : 'This will permanently delete the file.'}
+        </Dialog.Description>
+        </Dialog.Header>
+        <Dialog.Footer>
+            <Button variant="outline" onclick={() => deleteConfirm = false}>Cancel</Button>
+            <Button variant="destructive" onclick={confirmDelete}>Delete</Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
 
 <style>
+    .upload-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .or-divider {
+        color: var(--muted-foreground, #888);
+        font-size: 0.85em;
+        white-space: nowrap;
+    }
+
     .files {
         flex-shrink: 0;  /* IMPORTANTE!!! */
         background: #f1efeb; /* #e7ffee; */
