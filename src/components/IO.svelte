@@ -103,7 +103,7 @@
             </div>
         </div>
     
-        <div id="interrupts">
+        <!-- <div id="interrupts">
             <div style="flex: 4 0 0;">
                 <div class="label">Interrupt</div>
                 
@@ -162,7 +162,7 @@
                     </button>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
     
 </div>
