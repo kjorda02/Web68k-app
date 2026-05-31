@@ -114,7 +114,7 @@ function reset() {
     nextFd = 3;
     
     return WebAssembly.instantiateStreaming(
-        fetch("src/lib/wasm/vasmm68k_motvasm.wasm"), {
+        fetch("/vasmm68k_motvasm.wasm"), {
             env: wasmImports,
             wasi_snapshot_preview1: wasmImports,
             js: {

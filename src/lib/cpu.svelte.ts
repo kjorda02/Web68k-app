@@ -334,7 +334,7 @@ export var cpu = new CPU();
 
 // --------------------------------------------------------------
 WebAssembly.instantiateStreaming(
-    fetch("/src/lib/wasm/cpu.wasm"), {
+    fetch("/cpu.wasm"), {
         env: wasmImports,
         wasi_snapshot_preview1: wasmImports,
         js: {
