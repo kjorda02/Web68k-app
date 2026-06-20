@@ -72,21 +72,15 @@
         stoppedWriting = true;
     }, 1000);
 
-    export function restoreState(file: string): EditorState {
-        const newState = EditorState.create({
-            doc: file,
-            extensions: extensions
-        });
-
-        save(view.state);
-        view.setState(newState);
-
-        return newState;
+    export function createState(doc: string): EditorState {
+        return EditorState.create({ doc, extensions });
     }
 
-    export function switchState(state: EditorState) {
-        save(view.state);
+    export function switchState(path: string, state: EditorState) {
+        save(view.state);    // Persist the file we're leaving
+        currentFilePath = path;
         view.setState(state);
+        syncGutters();       // Re-apply the gutter on the freshly activated state
     }
 
     export function setSaveCallBack(func) {
@@ -95,10 +89,6 @@
 
     // --- EXPORTS -----------------------------------------------------------------
     let currentFilePath = $state<string>(null);
-
-    export function setCurrentFilePath(path: string) {
-        currentFilePath = path;
-    }
 
     var savedState:EditorState;
     var scroll;
@@ -172,6 +162,7 @@
     }
 
     let gutterCompartment = new Compartment;
+    let guttersEnabled = false; // Persisted across file switches (state swaps lose compartment config)
 
     const addressGutter = [
         
@@ -196,15 +187,20 @@
     ];
 
     export function addrGutters(enable: boolean) {
-        view.dispatch({
-            effects: gutterCompartment.reconfigure(enable ? addressGutter : [])
-        });
+        guttersEnabled = enable;
+        syncGutters();
+    }
 
-        if (enable) {
-            // console.log(lineAddrs);
-            // console.log(lineAddrs['/MAIN.X68'][9]);
-            setBpAddrs();
-        }
+    // Each file owns its own EditorState, so a view.setState() swap loses the gutter
+    // compartment config. This re-syncs the active state's gutter to the global
+    // guttersEnabled flag (and registers the file's breakpoints while debugging).
+    // Called both when toggling debug mode and after every file switch, so gutters
+    // appear in included files during execution and are cleared from them on reset.
+    function syncGutters() {
+        view.dispatch({
+            effects: gutterCompartment.reconfigure(guttersEnabled ? addressGutter : [])
+        });
+        if (guttersEnabled) setBpAddrs();
     }
 
     // --- BREAKPOINTS -----------------------------------------------

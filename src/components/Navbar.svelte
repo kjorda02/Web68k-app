@@ -13,12 +13,14 @@
     var running = $state(false);
     var canRun = $state(false);
     var hasRun = $state(false);
+    var buildFile:string; // File active when build was pressed; reset returns here
 
     function delay(ms:number) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function build() {
+        buildFile = files.getCurrentPath();
         editor.debugMode(); // Make editor non-editable
 
         cursor="wait";
@@ -89,7 +91,7 @@
 
     function reset() {
         cpu.reset();
-        editor.addrGutters(false);
+        files.switchToPath(buildFile); // Re-sync picker + editor to build-time file BEFORE restoring state
         editor.editMode();
         canRun = false;
         hasRun = false;

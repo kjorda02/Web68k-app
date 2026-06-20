@@ -23,6 +23,17 @@ START:                  ; first instruction of program
     END START        ; last line of source
 `;
 
+    const NEW_FILE = `*-----------------------------------------------------------
+* Title      :
+* Written by :
+* Date       :
+* Description:
+*-----------------------------------------------------------
+
+* Put program code here
+
+`;
+
     type FileTree = {
         children?: {
             [key: string]: FileTree;
@@ -98,17 +109,9 @@ START:                  ; first instruction of program
     }
 
     function switchFile(targetFile:FileTree) {
-        editor.setCurrentFilePath(targetFile.path);
-        if (targetFile.content) {
-            // File has been opened previously, restore editor state
-            editor.switchState(targetFile.content);
-        }
-        else {
-            // Need to load file from storage and create new editor state
-            const file = localStorage.getItem(targetFile.path);
-            const newState = editor.restoreState(file);
-            targetFile.content = newState;
-        }
+        // Lazily create and cache the editor state the first time a file is opened
+        targetFile.content ??= editor.createState(localStorage.getItem(targetFile.path));
+        editor.switchState(targetFile.path, targetFile.content);
         currentFile = targetFile;
     }
 
@@ -146,7 +149,7 @@ START:                  ; first instruction of program
         } else {
             const path = selected.path+createName;
             selected.children[createName] = { path, content: null };
-            localStorage.setItem(path, DEFAULT_FILE);
+            localStorage.setItem(path, NEW_FILE);
         }
 
         create = false;
