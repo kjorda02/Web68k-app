@@ -93,8 +93,11 @@ class CPU {
     }
 
     #update_display() {
-        const ptr = wasmcpu.read_mem_window(this.#displayAddr, 8);
-        this.#display.splice(0, 8, ...new Uint8Array(wasmcpu.memory.buffer, ptr, 8));
+        // EASy68K layout: 2 bytes per digit, only the even (first) byte of each
+        // pair drives the segments; the odd byte is unused padding for alignment.
+        const ptr = wasmcpu.read_mem_window(this.#displayAddr, 16);
+        const raw = new Uint8Array(wasmcpu.memory.buffer, ptr, 16);
+        this.#display.splice(0, 8, ...Array.from({ length: 8 }, (_, i) => raw[i * 2]));
     }
 
     #update_leds() {
@@ -236,7 +239,7 @@ class CPU {
                     addr += c;
                     
                     wasmcpu.write_mem(addr, 0, val);
-                    if (addr >= this.#displayAddr && addr < this.#displayAddr + 8) this.#update_display();
+                    if (addr >= this.#displayAddr && addr < this.#displayAddr + 16) this.#update_display();
                     else if (addr === this.#ledsAddr) this.#update_leds();
                     return true;
                 }
